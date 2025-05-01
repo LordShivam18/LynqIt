@@ -18,13 +18,17 @@ const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Middleware
 app.use(express.json());
 app.use(cookieParser());
 
 // CORS configuration based on environment
 if (process.env.NODE_ENV === "production") {
-  // In production, no need for CORS as frontend and backend are on same origin
-  app.use(cors());
+  // In production, use a more permissive CORS setup initially for debugging
+  app.use(cors({
+    origin: true, // Allow requests from any origin in production for now
+    credentials: true
+  }));
 } else {
   // In development, allow requests from the development server
   app.use(
@@ -35,26 +39,43 @@ if (process.env.NODE_ENV === "production") {
   );
 }
 
-// API routes
+// API routes - important to define these before the static file middleware
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
-
-// Serve static files in production
-if (process.env.NODE_ENV === "production") {
-  const frontendBuildPath = path.resolve(__dirname, "../../../frontend/dist");
-  
-  // Serve static files from the frontend build
-  app.use(express.static(frontendBuildPath));
-
-  // For any route not matching API routes, serve the frontend
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, "index.html"));
-  });
-}
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "OK", message: "Server is running" });
+});
+
+// Serve static files in production
+if (process.env.NODE_ENV === "production") {
+  try {
+    const frontendBuildPath = path.resolve(__dirname, "../../../frontend/dist");
+    console.log("Serving static files from:", frontendBuildPath);
+    
+    // Serve static files from the frontend build
+    app.use(express.static(frontendBuildPath));
+    
+    // For any route not matching API routes, serve the frontend index.html
+    app.get("*", (req, res) => {
+      // Make sure the url doesn't contain invalid path parameters
+      if (req.url.includes(':')) {
+        console.warn(`Potentially invalid URL pattern detected: ${req.url}`);
+        return res.status(400).send('Invalid URL pattern');
+      }
+      
+      res.sendFile(path.join(frontendBuildPath, "index.html"));
+    });
+  } catch (error) {
+    console.error("Error setting up static file serving:", error);
+  }
+}
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
 
 server.listen(PORT, () => {

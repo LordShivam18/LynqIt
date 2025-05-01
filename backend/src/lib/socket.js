@@ -8,10 +8,16 @@ import { getUnreadCountsForUser } from "../controllers/message.controller.js";
 const app = express();
 const server = http.createServer(app);
 
+// Configure Socket.io with appropriate CORS settings
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173"],
+    origin: process.env.NODE_ENV === "production" 
+      ? true // Allow any origin in production
+      : ["http://localhost:5173"],
+    methods: ["GET", "POST"],
+    credentials: true
   },
+  pingTimeout: 60000 // Increase timeout for better connection stability
 });
 
 export function getReceiverSocketId(userId) {
