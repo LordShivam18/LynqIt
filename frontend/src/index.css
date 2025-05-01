@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google button styling */
+.google-login-button {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.google-login-button iframe {
+  width: 100% !important;
+}
+
+.google-login-button button {
+  width: 100% !important;
+}
+
+/* Add this to ensure Google buttons render properly */
+.google-login-button div[style] {
+  width: 100% !important;
+}

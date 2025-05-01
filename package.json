@@ -1,0 +1,29 @@
+{
+  "name": "chat-app",
+  "version": "1.0.0",
+  "description": "Chat application with frontend and backend",
+  "main": "backend/src/index.js",
+  "type": "module",
+  "scripts": {
+    "install-server": "cd backend && npm install",
+    "install-client": "cd frontend && npm install",
+    "install": "npm run install-server && npm run install-client",
+    "build-client": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "dev:server": "cd backend && npm run dev",
+    "dev:client": "cd frontend && npm run dev",
+    "build": "npm run build-client",
+    "render-postbuild": "npm run build-client"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "chat",
+    "realtime",
+    "socket.io",
+    "react"
+  ],
+  "author": "",
+  "license": "ISC"
+} 

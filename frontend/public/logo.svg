@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="40" height="40" rx="12" fill="#7B5CF0" class="qr-fill"/>
+  <path d="M30 20C30 14.4772 25.5228 10 20 10C14.4772 10 10 14.4772 10 20C10 22.5366 10.9542 24.8545 12.5 26.6142V30L16.4571 28.0813C17.5427 28.3603 18.7003 28.5085 19.898 28.5085C25.4208 28.5085 30 24.1199 30 18.5971V20Z" fill="white"/>
+</svg> 

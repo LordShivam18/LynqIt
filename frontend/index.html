@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LynqIt</title>
+
+    <!-- Dynamically generated favicon -->
+    <script>
+      const setFavicon = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.beginPath();
+        ctx.rect(0, 0, 64, 64);
+        ctx.fillStyle = '#4f46e5'; // indigo-600
+        ctx.fill();
+
+        // Chat bubbles
+        ctx.beginPath();
+        ctx.fillStyle = 'white';
+        ctx.arc(16, 24, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(32, 24, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(48, 24, 3, 0, Math.PI * 2); ctx.fill();
+
+        // Speech bubble outline
+        ctx.beginPath();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 4;
+        ctx.moveTo(12, 44);
+        ctx.lineTo(20, 52);
+        ctx.lineTo(28, 44);
+        ctx.lineTo(52, 44);
+        ctx.arc(52, 32, 12, Math.PI / 2, 3 * Math.PI / 2, true);
+        ctx.lineTo(12, 20);
+        ctx.arc(12, 32, 12, 3 * Math.PI / 2, Math.PI / 2, true);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Set favicon
+        const favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/png';
+        favicon.href = canvas.toDataURL('image/png');
+        document.head.appendChild(favicon);
+      };
+
+      window.addEventListener('DOMContentLoaded', setFavicon);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
