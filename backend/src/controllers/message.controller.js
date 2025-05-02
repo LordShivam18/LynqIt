@@ -146,7 +146,7 @@ export const sendMessage = async (req, res) => {
           user: senderDetails
         });
       } else {
-        io.to(receiverSocketId).emit("newMessage", newMessage);
+      io.to(receiverSocketId).emit("newMessage", newMessage);
       }
       
       // Get updated unread counts for receiver
@@ -422,25 +422,23 @@ export const deleteMessage = async (req, res) => {
         return res.status(400).json({ error: "Cannot delete for everyone after 24 hours" });
       }
       
-      // Mark as deleted for everyone
-      message.isDeleted = true;
-      message.deletedFor = 'everyone';
-      message.deletedBy = userId;
-      message.deletedAt = new Date();
-      
-      await message.save();
-      
-      // If there's an image, delete from cloudinary
+      // Handle media deletion in Cloudinary if this message has an image/media
       if (message.image) {
         try {
           // Extract public ID from Cloudinary URL
-          const publicId = message.image.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(publicId);
+          const publicId = extractCloudinaryPublicId(message.image);
+          if (publicId) {
+            await cloudinary.uploader.destroy(publicId);
+            console.log(`Deleted media from Cloudinary: ${publicId}`);
+          }
         } catch (error) {
-          console.error("Error deleting image from Cloudinary:", error);
+          console.error("Error deleting media from Cloudinary:", error);
           // Continue with message deletion even if image deletion fails
         }
       }
+      
+      // For "delete for everyone", actually delete the message from the database
+      await Message.findByIdAndDelete(messageId);
       
       // Notify the other user
       const otherUserId = message.senderId.toString() === userId.toString() 
@@ -455,19 +453,138 @@ export const deleteMessage = async (req, res) => {
         });
       }
     } else {
-      // Delete for me - just mark it as deleted for this user
-      message.isDeleted = true;
-      message.deletedFor = 'me';
-      message.deletedBy = userId;
-      message.deletedAt = new Date();
-      
-      await message.save();
+      // For "delete for me", we need to determine if both users have deleted the message
+      if (message.isDeleted && message.deletedFor === 'me' && 
+          message.deletedBy && message.deletedBy.toString() !== userId.toString()) {
+        // Both users have now deleted the message, so we can remove it entirely
+        // Handle media deletion in Cloudinary if this message has an image/media
+        if (message.image) {
+          try {
+            // Extract public ID from Cloudinary URL
+            const publicId = extractCloudinaryPublicId(message.image);
+            if (publicId) {
+              await cloudinary.uploader.destroy(publicId);
+              console.log(`Deleted media from Cloudinary: ${publicId}`);
+            }
+          } catch (error) {
+            console.error("Error deleting media from Cloudinary:", error);
+            // Continue with message deletion even if image deletion fails
+          }
+        }
+        
+        // Delete the message entirely from the database
+        await Message.findByIdAndDelete(messageId);
+      } else {
+        // Only one user has deleted it, so mark as deleted for this user
+        await Message.findByIdAndUpdate(messageId, {
+          isDeleted: true,
+          deletedFor: 'me',
+          deletedBy: userId,
+          deletedAt: new Date()
+        });
+      }
     }
     
     res.status(200).json({ message: "Message deleted successfully" });
     
   } catch (error) {
     console.error("Error in deleteMessage controller:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Helper function to extract Cloudinary public ID from URL
+function extractCloudinaryPublicId(url) {
+  try {
+    // Handle different Cloudinary URL formats
+    if (!url) return null;
+    
+    // Format: https://res.cloudinary.com/cloud-name/image/upload/v1234567890/folder/public_id.ext
+    const regex = /\/v\d+\/(?:.*\/)?(.+?)\./;
+    const match = url.match(regex);
+    
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    // Alternative approach for different URL formats
+    const urlParts = url.split('/');
+    const filenamePart = urlParts[urlParts.length - 1];
+    const publicId = filenamePart.split('.')[0];
+    
+    return publicId;
+  } catch (error) {
+    console.error("Error extracting Cloudinary public ID:", error);
+    return null;
+  }
+}
+
+export const editMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id;
+    
+    if (!text || text.trim() === '') {
+      return res.status(400).json({ error: "Message text cannot be empty" });
+    }
+    
+    // Find the message
+    const message = await Message.findById(messageId);
+    
+    if (!message) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+    
+    // Only the sender can edit their own message
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ error: "Only the sender can edit this message" });
+    }
+    
+    // Check if message is already deleted
+    if (message.isDeleted) {
+      return res.status(400).json({ error: "Cannot edit a deleted message" });
+    }
+    
+    // Check if it's within 15 minutes
+    const messageDate = new Date(message.createdAt);
+    const now = new Date();
+    const minutesDiff = (now - messageDate) / (1000 * 60);
+    
+    if (minutesDiff > 15) {
+      return res.status(400).json({ error: "Cannot edit messages after 15 minutes" });
+    }
+    
+    // If this is the first edit, save the original text
+    const originalText = !message.isEdited ? message.text : message.originalText;
+    
+    // Update the message
+    const updatedMessage = await Message.findByIdAndUpdate(
+      messageId, 
+      { 
+        text, 
+        isEdited: true, 
+        editedAt: new Date(),
+        originalText
+      },
+      { new: true }
+    );
+    
+    // Notify the recipient about the edit
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageEdited", updatedMessage);
+    }
+    
+    // Also notify the sender (for multiple devices/windows)
+    const senderSocketId = getReceiverSocketId(userId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messageEdited", updatedMessage);
+    }
+    
+    res.status(200).json(updatedMessage);
+  } catch (error) {
+    console.error("Error in editMessage controller:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

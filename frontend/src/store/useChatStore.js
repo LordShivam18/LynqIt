@@ -328,16 +328,18 @@ export const useChatStore = create((set, get) => ({
 
   deleteMessage: async (messageId, deleteType) => {
     set({ isDeletingMessage: true });
+    
     try {
-      // Update UI optimistically
+      // Optimistically update UI first
       const currentMessages = get().messages;
+      
+      // Update the messages in the UI
       const updatedMessages = currentMessages.map(message => {
         if (message._id === messageId) {
           return {
             ...message,
             isDeleted: true,
             deletedFor: deleteType,
-            deletedBy: useAuthStore.getState().authUser._id,
             deletedAt: new Date()
           };
         }
@@ -351,12 +353,20 @@ export const useChatStore = create((set, get) => ({
         data: { deleteType } 
       });
       
-      // Emit socket event for real-time updates if deleting for everyone
+      // For 'everyone' deletion, remove the message entirely from UI after a delay
       if (deleteType === 'everyone') {
-        const socket = useAuthStore.getState().socket;
-        if (socket && socket.connected) {
-          socket.emit("messageDeleted", { messageId, deleteType });
-        }
+        // Wait a moment for the animation/transition
+        setTimeout(() => {
+          set(state => ({
+            messages: state.messages.filter(m => m._id !== messageId)
+          }));
+        }, 3000);
+      }
+      
+      // Emit socket event for real-time updates
+      const socket = useAuthStore.getState().socket;
+      if (socket && socket.connected) {
+        socket.emit("messageDeleted", { messageId, deleteType });
       }
       
     } catch (error) {
@@ -584,18 +594,57 @@ export const useChatStore = create((set, get) => ({
     socket.on("messageDeleted", ({ messageId, deleteType }) => {
       const currentMessages = get().messages;
       
-      // Update the messages in the UI
-      const updatedMessages = currentMessages.map(message => {
-        if (message._id === messageId) {
-          return {
-            ...message,
-            isDeleted: true,
-            deletedFor: deleteType,
-            deletedAt: new Date()
-          };
-        }
-        return message;
-      });
+      if (deleteType === 'everyone') {
+        // For delete for everyone, we'll completely remove the message after a delay
+        const updatedMessages = currentMessages.map(message => {
+          if (message._id === messageId) {
+            return {
+              ...message,
+              isDeleted: true,
+              deletedFor: deleteType,
+              deletedAt: new Date()
+            };
+          }
+          return message;
+        });
+        
+        set({ messages: updatedMessages });
+        
+        // Remove the message completely after a delay
+        setTimeout(() => {
+          set(state => ({
+            messages: state.messages.filter(m => m._id !== messageId)
+          }));
+        }, 3000);
+      } else {
+        // For delete for me, just mark as deleted
+        const updatedMessages = currentMessages.map(message => {
+          if (message._id === messageId) {
+            return {
+              ...message,
+              isDeleted: true,
+              deletedFor: deleteType,
+              deletedAt: new Date()
+            };
+          }
+          return message;
+        });
+        
+        set({ messages: updatedMessages });
+      }
+      
+      // Update users list to reflect changes in recent messages
+      get().getUsers();
+    });
+    
+    // Listen for message editing
+    socket.on("messageEdited", (updatedMessage) => {
+      const currentMessages = get().messages;
+      
+      // Update the specific message
+      const updatedMessages = currentMessages.map(message => 
+        message._id === updatedMessage._id ? updatedMessage : message
+      );
       
       set({ messages: updatedMessages });
     });
@@ -645,6 +694,7 @@ export const useChatStore = create((set, get) => ({
       socket.off("unreadCountUpdate");
       socket.off("messageDeleted");
       socket.off("refreshChats");
+      socket.off("messageEdited");
     }
     
     // Clear heartbeat interval
@@ -695,5 +745,77 @@ export const useChatStore = create((set, get) => ({
     const status = get().userStatuses[userId];
     if (!status) return null;
     return status;
+  },
+
+  editMessage: async (messageId, text) => {
+    try {
+      // Check if message can be edited (within 15 minutes)
+      const message = get().messages.find(m => m._id === messageId);
+      
+      if (!message) {
+        toast.error("Message not found");
+        return false;
+      }
+      
+      // Only the sender can edit
+      if (message.senderId !== useAuthStore.getState().authUser._id) {
+        toast.error("You can only edit your own messages");
+        return false;
+      }
+      
+      // Check if already deleted
+      if (message.isDeleted) {
+        toast.error("Cannot edit a deleted message");
+        return false;
+      }
+      
+      // Check if within 15 minutes
+      const messageDate = new Date(message.createdAt);
+      const now = new Date();
+      const minutesDiff = (now - messageDate) / (1000 * 60);
+      
+      if (minutesDiff > 15) {
+        toast.error("Cannot edit messages after 15 minutes");
+        return false;
+      }
+      
+      // Optimistically update UI
+      const currentMessages = get().messages;
+      const updatedMessages = currentMessages.map(msg => {
+        if (msg._id === messageId) {
+          return {
+            ...msg,
+            text,
+            isEdited: true,
+            editedAt: new Date(),
+            originalText: !msg.isEdited ? msg.text : msg.originalText
+          };
+        }
+        return msg;
+      });
+      
+      set({ messages: updatedMessages });
+      
+      // Call API to update the message
+      const res = await axiosInstance.put(`/messages/${messageId}`, { text });
+      
+      // Emit socket event for real-time updates
+      const socket = useAuthStore.getState().socket;
+      if (socket && socket.connected) {
+        socket.emit("messageEdited", { messageId, text });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error editing message:", error);
+      toast.error(error.response?.data?.message || "Failed to edit message");
+      
+      // Revert changes on error
+      if (get().selectedUser) {
+        await get().getMessages(get().selectedUser._id);
+      }
+      
+      return false;
+    }
   }
 }));

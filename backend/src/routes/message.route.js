@@ -8,7 +8,8 @@ import {
   updateMessageStatus,
   updateLastSeen,
   getUnreadCounts,
-  deleteMessage
+  deleteMessage,
+  editMessage
 } from "../controllers/message.controller.js";
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.post("/react/:messageId", protectRoute, reactToMessage);
 router.post("/status/:status", protectRoute, updateMessageStatus);
 router.post("/lastseen", protectRoute, updateLastSeen);
 
+router.put("/:id", protectRoute, editMessage);
 router.delete("/:id", protectRoute, deleteMessage);
 
 export default router;

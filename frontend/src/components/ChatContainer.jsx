@@ -6,8 +6,9 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { X, FileText, Film, Smile, Check, Info, Trash2, MoreVertical, AlertCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { X, FileText, Film, Smile, Check, Info, Trash2, MoreVertical, AlertCircle, AlertTriangle, RefreshCw, Edit } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
+import EditMessageModal from "./EditMessageModal";
 
 const ChatContainer = () => {
   const {
@@ -28,6 +29,7 @@ const ChatContainer = () => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const emojiPickerRef = useRef(null);
   const moreOptionsRef = useRef(null);
   const [showMessageOptions, setShowMessageOptions] = useState(null);
@@ -194,6 +196,29 @@ const ChatContainer = () => {
     const hoursDiff = (now - messageDate) / (1000 * 60 * 60);
     
     return hoursDiff <= 24; // Can delete for everyone within 24 hours
+  };
+  
+  // Check if message is editable (within 15 minutes)
+  const canEditMessage = (message) => {
+    if (message.senderId !== authUser._id) return false;
+    if (message.isDeleted) return false;
+    
+    const messageDate = new Date(message.createdAt);
+    const now = new Date();
+    const minutesDiff = (now - messageDate) / (1000 * 60);
+    
+    return minutesDiff <= 15; // Can edit within 15 minutes
+  };
+  
+  const handleEditMessage = (message) => {
+    setSelectedMessage(message);
+    setShowEditModal(true);
+    setShowMessageOptions(null);
+  };
+  
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setSelectedMessage(null);
   };
   
   const renderStatusIndicator = (message) => {
@@ -423,11 +448,11 @@ const ChatContainer = () => {
           // If message is deleted and we're not supposed to see it, skip rendering
           if (message.isDeleted && message.deletedFor === 'everyone') {
             return (
-              <div
-                key={message._id}
+          <div
+            key={message._id}
                 className={`chat ${isMyMessage ? "chat-end" : "chat-start"}`}
                 ref={message === messages[messages.length - 1] ? messageEndRef : null}
-              >
+          >
                 <div className="chat-bubble bg-base-300 text-base-content/60 italic">
                   This message was deleted
                 </div>
@@ -449,9 +474,9 @@ const ChatContainer = () => {
               ref={message === messages[messages.length - 1] ? messageEndRef : null}
             >
               <div className="chat-header mb-1 flex items-center">
-                <time className="text-xs opacity-50 ml-1">
-                  {formatMessageTime(message.createdAt)}
-                </time>
+              <time className="text-xs opacity-50 ml-1">
+                {formatMessageTime(message.createdAt)}
+              </time>
                 <div className="relative ml-1">
                   <button 
                     className="opacity-50 hover:opacity-100"
@@ -468,13 +493,24 @@ const ChatContainer = () => {
                     >
                       <div className="py-1">
                         {isMyMessage && (
-                          <button 
-                            className="px-4 py-2 text-sm w-full text-left hover:bg-base-300 flex items-center gap-2"
-                            onClick={() => handleMessageInfo(message)}
-                          >
-                            <Info size={14} />
-                            <span>Info</span>
-                          </button>
+                          <>
+                            <button 
+                              className="px-4 py-2 text-sm w-full text-left hover:bg-base-300 flex items-center gap-2"
+                              onClick={() => handleMessageInfo(message)}
+                            >
+                              <Info size={14} />
+                              <span>Info</span>
+                            </button>
+                            {canEditMessage(message) && (
+                              <button 
+                                className="px-4 py-2 text-sm w-full text-left hover:bg-base-300 flex items-center gap-2"
+                                onClick={() => handleEditMessage(message)}
+                              >
+                                <Edit size={14} />
+                                <span>Edit</span>
+                              </button>
+                            )}
+                          </>
                         )}
                         <button 
                           className="px-4 py-2 text-sm w-full text-left hover:bg-base-300 flex items-center gap-2 text-error"
@@ -490,7 +526,14 @@ const ChatContainer = () => {
               </div>
               <div className="chat-bubble flex flex-col group relative">
                 {message.image && renderMediaContent(message)}
-                {message.text && <p>{message.text}</p>}
+                {message.text && (
+                  <div>
+                    <p>{message.text}</p>
+                    {message.isEdited && (
+                      <span className="text-xs opacity-60 ml-1">(edited)</span>
+                    )}
+                  </div>
+                )}
                 
                 {/* Status indicator for my messages */}
                 {renderMessageStatus(message)}
@@ -598,7 +641,14 @@ const ChatContainer = () => {
             <div className="space-y-4">
               <div className="p-4 bg-base-200 rounded-lg">
                 {selectedMessage.image && renderMediaContent(selectedMessage)}
-                {selectedMessage.text && <p>{selectedMessage.text}</p>}
+                {selectedMessage.text && (
+                  <div>
+                    <p>{selectedMessage.text}</p>
+                    {selectedMessage.isEdited && (
+                      <span className="text-xs opacity-60 ml-1">(edited)</span>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -606,6 +656,13 @@ const ChatContainer = () => {
                   <span>Sent</span>
                   <span>{formatDetailedTime(selectedMessage.createdAt)}</span>
                 </div>
+                
+                {selectedMessage.isEdited && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Edited</span>
+                    <span>{formatDetailedTime(selectedMessage.editedAt)}</span>
+                  </div>
+                )}
                 
                 <div className="flex items-center justify-between text-sm">
                   <span>Delivered</span>
@@ -684,6 +741,14 @@ const ChatContainer = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Message Modal */}
+      {showEditModal && selectedMessage && (
+        <EditMessageModal 
+          message={selectedMessage}
+          onClose={closeEditModal}
+        />
       )}
 
       <MessageInput />

@@ -4,6 +4,7 @@ import express from "express";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import { getUnreadCountsForUser } from "../controllers/message.controller.js";
+import cloudinary from "../lib/cloudinary.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -172,8 +173,25 @@ io.on("connection", async (socket) => {
         return;
       }
       
-      // For delete for everyone, notify the recipient
+      // Process the deletion based on type
       if (deleteType === 'everyone') {
+        // For "delete for everyone", delete the message and associated media
+        if (message.image) {
+          try {
+            // Extract public ID from Cloudinary URL
+            const publicId = extractCloudinaryPublicId(message.image);
+            if (publicId) {
+              await cloudinary.uploader.destroy(publicId);
+              console.log(`[Socket] Deleted media from Cloudinary: ${publicId}`);
+            }
+          } catch (error) {
+            console.error("[Socket] Error deleting media from Cloudinary:", error);
+          }
+        }
+        
+        // Delete the message from database
+        await Message.findByIdAndDelete(messageId);
+        
         // Get the other user's ID
         const otherUserId = message.senderId.toString() === userId.toString() 
           ? message.receiverId.toString() 
@@ -187,9 +205,94 @@ io.on("connection", async (socket) => {
             deleteType
           });
         }
+      } else if (deleteType === 'me') {
+        // For "delete for me", check if both users have deleted the message
+        if (message.deletedFor === 'me' && message.deletedBy && message.deletedBy.toString() !== userId) {
+          // Both users have deleted the message, so delete it entirely and its media
+          if (message.image) {
+            try {
+              // Extract public ID from Cloudinary URL
+              const publicId = extractCloudinaryPublicId(message.image);
+              if (publicId) {
+                await cloudinary.uploader.destroy(publicId);
+                console.log(`[Socket] Deleted media from Cloudinary after both users deleted: ${publicId}`);
+              }
+            } catch (error) {
+              console.error("[Socket] Error deleting media from Cloudinary:", error);
+            }
+          }
+          
+          // Delete the message from database
+          await Message.findByIdAndDelete(messageId);
+        } else {
+          // Just mark as deleted for this user
+          message.isDeleted = true;
+          message.deletedFor = 'me';
+          message.deletedBy = userId;
+          message.deletedAt = new Date();
+          
+          await message.save();
+        }
       }
     } catch (error) {
-      console.error("Error handling message deletion:", error);
+      console.error("Error handling message deletion in socket:", error);
+    }
+  });
+
+  // Handle message editing
+  socket.on("messageEdited", async ({ messageId, text }) => {
+    try {
+      const message = await Message.findById(messageId);
+      
+      if (!message) {
+        return;
+      }
+      
+      // Verify that the sender is the one editing
+      if (message.senderId.toString() !== userId) {
+        console.error("Unauthorized attempt to edit message:", messageId);
+        return;
+      }
+      
+      // Check if message is deleted
+      if (message.isDeleted) {
+        return;
+      }
+      
+      // Check if it's within 15 minutes
+      const messageDate = new Date(message.createdAt);
+      const now = new Date();
+      const minutesDiff = (now - messageDate) / (1000 * 60);
+      
+      if (minutesDiff > 15) {
+        return;
+      }
+      
+      // If this is the first edit, save the original text
+      const originalText = !message.isEdited ? message.text : message.originalText;
+      
+      // Update the message
+      const updatedMessage = await Message.findByIdAndUpdate(
+        messageId,
+        {
+          text,
+          isEdited: true,
+          editedAt: new Date(),
+          originalText
+        },
+        { new: true }
+      );
+      
+      // Notify the recipient about the edit
+      const receiverSocketId = userSocketMap[message.receiverId.toString()];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("messageEdited", updatedMessage);
+      }
+      
+      // Also notify the sender on all devices
+      io.to(socket.id).emit("messageEdited", updatedMessage);
+    } catch (error) {
+      console.error("Error handling message editing:", error);
     }
   });
 
@@ -220,5 +323,31 @@ io.on("connection", async (socket) => {
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });
+
+// Helper function to extract Cloudinary public ID from URL
+function extractCloudinaryPublicId(url) {
+  try {
+    // Handle different Cloudinary URL formats
+    if (!url) return null;
+    
+    // Format: https://res.cloudinary.com/cloud-name/image/upload/v1234567890/folder/public_id.ext
+    const regex = /\/v\d+\/(?:.*\/)?(.+?)\./;
+    const match = url.match(regex);
+    
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    // Alternative approach for different URL formats
+    const urlParts = url.split('/');
+    const filenamePart = urlParts[urlParts.length - 1];
+    const publicId = filenamePart.split('.')[0];
+    
+    return publicId;
+  } catch (error) {
+    console.error("Error extracting Cloudinary public ID:", error);
+    return null;
+  }
+}
 
 export { io, app, server };

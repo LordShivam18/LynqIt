@@ -53,6 +53,18 @@ const messageSchema = new mongoose.Schema(
             type: Date,
             default: null
         },
+        isEdited: {
+            type: Boolean,
+            default: false
+        },
+        editedAt: {
+            type: Date,
+            default: null
+        },
+        originalText: {
+            type: String,
+            default: null
+        },
         reactions: [{
             userId: {
                 type: mongoose.Schema.Types.ObjectId,
