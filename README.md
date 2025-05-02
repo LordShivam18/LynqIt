@@ -54,6 +54,9 @@ This application is configured to be deployed on Render with both frontend and b
    MONGODB_URI=your-mongodb-connection-string
    JWT_SECRET=your-jwt-secret
    COOKIE_SECRET=your-cookie-secret
+   CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+   CLOUDINARY_API_KEY=your-cloudinary-api-key
+   CLOUDINARY_API_SECRET=your-cloudinary-api-secret
    ```
 
    Add any other environment variables needed by your application.
