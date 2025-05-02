@@ -65,7 +65,7 @@ const App = () => {
     );
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com"}>
+    <GoogleOAuthProvider clientId="461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com">
       <div data-theme={theme}>
         <Navbar />
 
