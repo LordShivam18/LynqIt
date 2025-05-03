@@ -22,3 +22,31 @@
 .google-login-button div[style] {
   width: 100% !important;
 }
+
+/* 3D transform utilities for AuthImagePattern */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+/* Keyframes for digital noise effect */
+@keyframes pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.8; }
+}
+
+/* Enhance focus effects */
+@keyframes circuit-pulse {
+  0% { opacity: 0.1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 0.1; }
+}
+
+/* Animation for dots moving across lines */
+@keyframes moveRight {
+  0% { left: -5px; }
+  100% { left: 100%; }
+}
