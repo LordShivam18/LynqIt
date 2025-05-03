@@ -314,10 +314,10 @@ const ProfilePage = () => {
   };
   
   const validateBio = () => {
-    if (profileData.bio.length > 200) {
+    if (profileData.bio.length > 150) {
       setErrors({
         ...errors,
-        bio: "Bio must be 200 characters or less"
+        bio: "Bio must be 150 characters or less"
       });
       return false;
     }
@@ -477,10 +477,10 @@ const ProfilePage = () => {
                           className={`px-4 py-2.5 bg-base-200 rounded-lg border w-full ${errors.bio ? 'border-red-500' : ''}`}
                           placeholder="Write something about yourself..."
                           rows={4}
-                          maxLength={200}
+                          maxLength={150}
                         />
                         <div className="flex justify-between items-center">
-                          <span className="text-xs text-zinc-400">{profileData.bio.length}/200 characters</span>
+                          <span className="text-xs text-zinc-400">{profileData.bio.length}/150 characters</span>
                           <button 
                             onClick={() => handleSaveField('bio')}
                             className="btn btn-sm btn-primary"

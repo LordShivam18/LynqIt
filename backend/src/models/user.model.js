@@ -22,8 +22,9 @@ const userSchema = new mongoose.Schema(
         },
         bio: {
             type: String,
+            trim: true,
             default: "",
-            maxlength: 200, // Limit bio to 200 characters
+            maxlength: 150, // Limit bio to 150 characters
         },
         username: {
             type: String,

@@ -164,8 +164,8 @@ export const updateProfile = async (req, res) => {
         
         // Handle bio update
         if (bio !== undefined) {
-            if (bio.length > 200) {
-                return res.status(400).json({ message: "Bio must be 200 characters or less" });
+            if (bio.length > 150) {
+                return res.status(400).json({ message: "Bio must be 150 characters or less" });
             }
             updateObj.bio = bio;
         }
