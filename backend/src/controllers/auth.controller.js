@@ -14,6 +14,16 @@ export const signup = async (req, res) => {
             return res.status(400).json({ message: "All fields are required" });
         }
 
+        // Email validation - only allow Gmail and Outlook emails
+        const validEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
+        const emailDomain = email.split('@')[1]?.toLowerCase();
+        
+        if (!emailDomain || !validEmailDomains.includes(emailDomain)) {
+            return res.status(400).json({ 
+                message: "Only Gmail and Outlook email addresses are allowed" 
+            });
+        }
+
         // Password strength validation
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{8,}$/;
         if (!passwordRegex.test(password)) {
@@ -27,6 +37,13 @@ export const signup = async (req, res) => {
         if (!usernameRegex.test(username)) {
             return res.status(400).json({
                 message: "Username can only include letters, numbers, and characters like . and _"
+            });
+        }
+        
+        // Enforce username length limit
+        if (username.length > 25) {
+            return res.status(400).json({
+                message: "Username must not exceed 25 characters"
             });
         }
 
@@ -77,6 +94,16 @@ export const login = async (req, res) => {
     try {
         if (!email || !password) {
             return res.status(400).json({ message: "All fields are required" });
+        }
+
+        // Email validation - only allow Gmail and Outlook emails
+        const validEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
+        const emailDomain = email.split('@')[1]?.toLowerCase();
+        
+        if (!emailDomain || !validEmailDomains.includes(emailDomain)) {
+            return res.status(400).json({ 
+                message: "Only Gmail and Outlook email addresses are allowed" 
+            });
         }
 
         // Find the user by email
@@ -145,11 +172,18 @@ export const updateProfile = async (req, res) => {
         
         // Handle username update
         if (username) {
-            // Username format check
+            // Username format check (letters, numbers, periods, max 15 chars)
             const usernameRegex = /^[a-zA-Z0-9._]+$/;
             if (!usernameRegex.test(username)) {
                 return res.status(400).json({
                     message: "Username can only include letters, numbers, and characters like . and _"
+                });
+            }
+            
+            // Enforce username length limit
+            if (username.length > 25) {
+                return res.status(400).json({
+                    message: "Username must not exceed 25 characters"
                 });
             }
             
@@ -277,6 +311,15 @@ export const googleAuth = async (req, res) => {
                 if (!usernameRegex.test(username)) {
                     return res.status(400).json({
                         message: "Username can only include letters, numbers, and characters like . and _"
+                    });
+                }
+                
+                // Enforce username length limit
+                if (username.length > 25) {
+                    return res.status(400).json({
+                        message: "Username must not exceed 25 characters",
+                        needsUsername: true,
+                        googleInfo: { email, name, picture }
                     });
                 }
                 

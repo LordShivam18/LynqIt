@@ -51,10 +51,21 @@ const SignUpPage = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
     if (!formData.email.trim()) return toast.error("Email is required");
     if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
+    
+    // Check if the email is from Gmail or Outlook
+    const validDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
+    const emailDomain = formData.email.split('@')[1]?.toLowerCase();
+    if (!emailDomain || !validDomains.includes(emailDomain)) {
+      return toast.error("Only Gmail and Outlook email addresses are allowed");
+    }
+    
     if (!formData.username.trim()) return toast.error("Username is required");
     const usernameRegex = /^[a-zA-Z0-9._]+$/;
     if (!usernameRegex.test(formData.username)) {
-      return toast.error("Username can only include letters, numbers,and characters like . and _");
+      return toast.error("Username can only include letters, numbers, and characters like . and _");
+    }
+    if (formData.username.length > 25) {
+      return toast.error("Username must not exceed 25 characters");
     }
     if (!formData.password) return toast.error("Password is required");
     
@@ -126,12 +137,13 @@ const SignUpPage = () => {
                 <input
                   type="email"
                   className={`input input-bordered input-sm w-full pl-10 ${!formData.email && 'input-error'}`}
-                  placeholder="you@example.com"
+                  placeholder="you@gmail.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                 />
               </div>
+
             </div>
 
             <div className="form-control">
@@ -148,6 +160,7 @@ const SignUpPage = () => {
                   placeholder="elon.musk"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  maxLength={25}
                   required
                 />
               </div>

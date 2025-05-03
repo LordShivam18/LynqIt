@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import GoogleUsernamePrompt from "../components/GoogleUsernamePrompt";
+import toast from "react-hot-toast";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +18,16 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check if the email is from Gmail or Outlook
+    const validDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
+    const emailDomain = formData.email.split('@')[1]?.toLowerCase();
+    
+    if (!emailDomain || !validDomains.includes(emailDomain)) {
+      toast.error("Only Gmail and Outlook email addresses are allowed");
+      return;
+    }
+    
     login(formData);
   };
   
@@ -54,7 +65,7 @@ const LoginPage = () => {
                 <input
                   type="email"
                   className={`input input-bordered w-full pl-10 ${!formData.email && 'input-error'}`}
-                  placeholder="you@example.com"
+                  placeholder="you@gmail.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
