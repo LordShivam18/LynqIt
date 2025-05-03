@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema(
             unique: true,
             match: [/^[a-zA-Z0-9._]+$/, "Username can only contain letters, numbers, and characters like . and _"],
         },
+        lastUsernameChange: {
+            type: Date,
+            default: null
+        },
         isOnline: {
             type: Boolean,
             default: false

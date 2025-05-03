@@ -25,46 +25,6 @@ A real-time chat application built with React, Socket.IO, and Node.js. Features 
 └── package.json        # Root package.json for deployment
 ```
 
-## Deployment to Render
-
-This application is configured to be deployed on Render with both frontend and backend on the same server.
-
-### Setup Instructions
-
-1. **Create a new Web Service on Render**
-
-   - Connect your GitHub repository
-   - Choose the "Web Service" option
-
-2. **Configure the Web Service**
-
-   - **Name**: Your application name
-   - **Environment**: Node
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
-   - **Region**: Choose the region closest to your users
-
-3. **Add Environment Variables**
-
-   In the Render dashboard, add the following environment variables:
-
-   ```
-   NODE_ENV=production
-   PORT=10000  # Render will use their own PORT, but this is a fallback
-   MONGODB_URI=your-mongodb-connection-string
-   JWT_SECRET=your-jwt-secret
-   COOKIE_SECRET=your-cookie-secret
-   CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
-   CLOUDINARY_API_KEY=your-cloudinary-api-key
-   CLOUDINARY_API_SECRET=your-cloudinary-api-secret
-   ```
-
-   Add any other environment variables needed by your application.
-
-4. **Automatic Deployment**
-
-   Render will automatically deploy your application when you push to the main branch of your repository.
-
 ## Development Setup
 
 To run the application locally:

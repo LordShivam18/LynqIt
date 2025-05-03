@@ -187,19 +187,36 @@ export const updateProfile = async (req, res) => {
                 });
             }
             
-            // Check if username is already taken (excluding current user)
-            const existingUser = await User.findOne({ 
-                username, 
-                _id: { $ne: userId } 
-            });
-            
-            if (existingUser) {
-                return res.status(400).json({ 
-                    message: "Username already exists. Please choose a different one." 
+            // Check if the username is different from the current one
+            const user = await User.findById(userId);
+            if (user.username !== username) {
+                // Check if 10 days have passed since the last username change
+                if (user.lastUsernameChange) {
+                    const daysSinceLastChange = Math.floor((new Date() - new Date(user.lastUsernameChange)) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysSinceLastChange < 10) {
+                        return res.status(400).json({
+                            message: `You can only change your username once every 10 days. You can change it again in ${10 - daysSinceLastChange} days.`
+                        });
+                    }
+                }
+                
+                // Check if username is already taken (excluding current user)
+                const existingUser = await User.findOne({ 
+                    username, 
+                    _id: { $ne: userId } 
                 });
+                
+                if (existingUser) {
+                    return res.status(400).json({ 
+                        message: "Username already exists. Please choose a different one." 
+                    });
+                }
+                
+                // Update the lastUsernameChange date
+                updateObj.username = username;
+                updateObj.lastUsernameChange = new Date();
             }
-            
-            updateObj.username = username;
         }
         
         // Handle password update

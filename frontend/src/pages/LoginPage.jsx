@@ -33,9 +33,12 @@ const LoginPage = () => {
   
   const handleGoogleLogin = async (credentialResponse) => {
     const result = await loginWithGoogle(credentialResponse.credential);
+    // If successful login, navigate to homepage
     if (result.success) {
       navigate('/');
     }
+    // If username is needed (new user), the modal will show automatically
+    // No need to navigate - user will stay on current page until they create a username
   };
 
   return (

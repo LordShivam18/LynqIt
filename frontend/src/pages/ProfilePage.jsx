@@ -5,6 +5,7 @@ import { Camera, Mail, User, Eye, EyeOff, Check, X, Info, Save, Edit, Lock, File
 import { QRCodeSVG } from "qrcode.react";
 import { useThemeStore } from "../store/useThemeStore";
 import bcrypt from "bcryptjs-react";
+import { toast } from "react-hot-toast";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
@@ -38,6 +39,13 @@ const ProfilePage = () => {
     totalContacts: 0,
     totalMessages: 0,
     lastActive: null
+  });
+  
+  // Username change tracking
+  const [usernameChangeInfo, setUsernameChangeInfo] = useState({
+    canChangeUsername: true,
+    daysRemaining: 0,
+    lastChanged: null
   });
   
   // QR code styling based on theme
@@ -285,6 +293,12 @@ const ProfilePage = () => {
   };
   
   const toggleEditMode = (field) => {
+    // Prevent editing username if the user can't change it yet
+    if (field === 'username' && !usernameChangeInfo.canChangeUsername) {
+      toast.error(`You can only change your username once every 10 days. You can change it again in ${usernameChangeInfo.daysRemaining} days.`);
+      return;
+    }
+    
     setEditMode({
       ...editMode,
       [field]: !editMode[field]
@@ -387,6 +401,47 @@ const ProfilePage = () => {
   const handleRefreshQrCode = () => {
     generateQrCodeData();
   };
+
+  // Update profile data when auth user changes
+  useEffect(() => {
+    if (authUser) {
+      setProfileData({
+        fullName: authUser.fullName || "",
+        username: authUser.username || "",
+        currentPassword: "",
+        newPassword: "",
+        bio: authUser.bio || ""
+      });
+      
+      // Calculate username change availability
+      if (authUser.lastUsernameChange) {
+        const lastChangeDate = new Date(authUser.lastUsernameChange);
+        const currentDate = new Date();
+        const diffTime = currentDate - lastChangeDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 10) {
+          setUsernameChangeInfo({
+            canChangeUsername: false,
+            daysRemaining: 10 - diffDays,
+            lastChanged: lastChangeDate
+          });
+        } else {
+          setUsernameChangeInfo({
+            canChangeUsername: true,
+            daysRemaining: 0,
+            lastChanged: lastChangeDate
+          });
+        }
+      } else {
+        setUsernameChangeInfo({
+          canChangeUsername: true,
+          daysRemaining: 0,
+          lastChanged: null
+        });
+      }
+    }
+  }, [authUser]);
 
   return (
     <div className="h-screen pt-20">
@@ -559,7 +614,8 @@ const ProfilePage = () => {
               </div>
                     <button 
                       onClick={() => toggleEditMode('username')}
-                      className="btn btn-sm btn-ghost btn-circle"
+                      className={`btn btn-sm btn-ghost btn-circle ${!usernameChangeInfo.canChangeUsername ? 'text-base-content/30 cursor-not-allowed' : ''}`}
+                      disabled={!usernameChangeInfo.canChangeUsername}
                     >
                       {editMode.username ? <X size={16} /> : <Edit size={16} />}
                     </button>
@@ -593,8 +649,31 @@ const ProfilePage = () => {
                       )}
                     </div>
                   ) : (
-                    <div className="bg-base-200 rounded-lg p-4">
-                      <p className="text-sm">@{profileData.username}</p>
+                    <div className="space-y-2">
+                      <div className="bg-base-200 rounded-lg p-4">
+                        <p className="text-sm">@{profileData.username}</p>
+                      </div>
+                      
+                      {/* Username change restriction info */}
+                      {!usernameChangeInfo.canChangeUsername && (
+                        <div className="text-warning text-xs flex items-start gap-1.5 p-2 bg-warning/10 rounded-lg">
+                          <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Username can only be changed once every 10 days. 
+                            You can change it again in {usernameChangeInfo.daysRemaining} day(s).
+                          </span>
+                        </div>
+                      )}
+                      
+                      {usernameChangeInfo.lastChanged && usernameChangeInfo.canChangeUsername && (
+                        <div className="text-info text-xs flex items-start gap-1.5 p-2 bg-info/10 rounded-lg">
+                          <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Last changed on {new Date(usernameChangeInfo.lastChanged).toLocaleDateString()}. 
+                            You can change your username now.
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

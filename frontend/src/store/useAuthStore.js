@@ -74,7 +74,7 @@ export const useAuthStore = create((set, get) => ({
           },
           isLoggingIn: false 
         });
-        toast.success("Please provide a username to complete your registration");
+        toast.success("Please create a username to complete your account");
         return { needsUsername: true };
       }
       
@@ -143,17 +143,24 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  updateProfile: async (data) => {
-    set({ isUpdatingProfile: true });
+  updateProfile: async (userData) => {
     try {
-      const res = await axiosInstance.put("/auth/update-profile", data);
-      set({ authUser: res.data });
-      toast.success("Profile updated successfully");
+      set({ isUpdatingProfile: true });
+      
+      const res = await axiosInstance.put("/auth/update-profile", userData);
+      
+      // Update authUser with the returned user data
+      set({ 
+        authUser: res.data,
+        isUpdatingProfile: false
+      });
+      
+      toast.success("Profile updated!");
+      return true;
     } catch (error) {
-      console.log("error in update profile:", error);
-      toast.error(error.response?.data?.message || "Failed to update profile");
-    } finally {
       set({ isUpdatingProfile: false });
+      toast.error(error.response?.data?.message || "Failed to update profile");
+      return false;
     }
   },
 
