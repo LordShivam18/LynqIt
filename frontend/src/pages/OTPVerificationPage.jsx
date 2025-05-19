@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import OTPInput from '../components/OTPInput';
+import AuthImagePattern from '../components/AuthImagePattern';
 import axios from 'axios';
 import { Mail } from 'lucide-react';
 
@@ -151,59 +152,79 @@ const OTPVerificationPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <div className="flex justify-center mb-6">
-          <div className="bg-blue-100 p-3 rounded-full">
-            <Mail size={32} className="text-blue-600" />
+    <div className="h-screen grid lg:grid-cols-2">
+      {/* Left Side - Form */}
+      <div className="flex flex-col justify-center items-center p-6 sm:p-12">
+        <div className="w-full max-w-md">
+          {/* Header with App Logo */}
+          <div className="flex items-center mb-5 justify-center">
+            <Mail className="size-6 text-primary mr-2" />
+            <div>
+              <h1 className="text-xl font-semibold">Verify Your Email</h1>
+              <p className="text-xs text-base-content/60">Enter the code sent to your email</p>
+            </div>
+          </div>
+
+          <div className="text-center mb-6">
+            <p className="text-base-content/70">
+              We've sent a verification code to <span className="font-medium">{userData?.email}</span>
+            </p>
+          </div>
+
+          <OTPInput length={6} onComplete={handleOTPComplete} />
+
+          <div className="mt-6">
+            <button
+              onClick={() => {}}
+              disabled={isVerifying}
+              className="btn btn-primary w-full"
+            >
+              {isVerifying ? (
+                <>
+                  <span className="loading loading-spinner loading-sm mr-2"></span>
+                  Verifying...
+                </>
+              ) : (
+                'Verify Email'
+              )}
+            </button>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-base-content/60 text-sm">
+              Didn't receive the code?{' '}
+              {canResend ? (
+                <button
+                  onClick={handleResendOTP}
+                  disabled={isResending}
+                  className="link link-primary"
+                >
+                  {isResending ? 'Resending...' : 'Resend Code'}
+                </button>
+              ) : (
+                <span className="text-base-content/40">
+                  Resend in {countdown}s
+                </span>
+              )}
+            </p>
+          </div>
+
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => navigate('/signup')}
+              className="link link-hover text-base-content/60 text-sm"
+            >
+              Back to Sign Up
+            </button>
           </div>
         </div>
-
-        <h2 className="text-2xl font-bold text-center mb-2">Verify Your Email</h2>
-        <p className="text-gray-600 text-center mb-6">
-          We've sent a verification code to <span className="font-medium">{userData?.email}</span>
-        </p>
-
-        <OTPInput length={6} onComplete={handleOTPComplete} />
-
-        <div className="mt-6">
-          <button
-            onClick={() => {}}
-            disabled={isVerifying}
-            className="w-full bg-blue-600 text-white py-2 rounded-md font-medium hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-          >
-            {isVerifying ? 'Verifying...' : 'Verify Email'}
-          </button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <p className="text-gray-600 text-sm">
-            Didn't receive the code?{' '}
-            {canResend ? (
-              <button
-                onClick={handleResendOTP}
-                disabled={isResending}
-                className="text-blue-600 font-medium hover:underline disabled:text-blue-400"
-              >
-                {isResending ? 'Resending...' : 'Resend Code'}
-              </button>
-            ) : (
-              <span className="text-gray-500">
-                Resend in {countdown}s
-              </span>
-            )}
-          </p>
-        </div>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => navigate('/signup')}
-            className="text-gray-600 hover:text-gray-800 text-sm"
-          >
-            Back to Sign Up
-          </button>
-        </div>
       </div>
+
+      {/* Right Side - Image/Pattern */}
+      <AuthImagePattern
+        title="Verify your account"
+        subtitle="One step away from joining LynqIt! Enter the verification code to complete your registration."
+      />
     </div>
   );
 };

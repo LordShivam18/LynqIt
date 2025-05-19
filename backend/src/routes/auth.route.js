@@ -1,5 +1,16 @@
 import express from "express";
-import { checkAuth, login, logout, signup, updateProfile, getAllUsers, googleAuth, deleteAccount } from "../controllers/auth.controller.js";
+import {
+    checkAuth,
+    login,
+    logout,
+    signup,
+    updateProfile,
+    getAllUsers,
+    googleAuth,
+    deleteAccount,
+    forgotPassword,
+    resetPassword
+} from "../controllers/auth.controller.js";
 import { requestOTP, verifyUserOTP, resendOTP } from "../controllers/otp.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -15,6 +26,10 @@ router.post("/google", googleAuth);
 router.post("/request-otp", requestOTP);
 router.post("/verify-otp", verifyUserOTP);
 router.post("/resend-otp", resendOTP);
+
+// Password reset routes
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 router.put("/update-profile", protectRoute, updateProfile);
 

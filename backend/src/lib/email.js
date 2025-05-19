@@ -267,3 +267,98 @@ export const sendWelcomeEmail = async (to, name) => {
         throw error;
     }
 };
+
+/**
+ * Send a password reset OTP email
+ * @param {string} to - Recipient email
+ * @param {string} otp - One-time password for password reset
+ * @returns {Promise<Object>} Nodemailer send mail response
+ */
+export const sendPasswordResetEmail = async (to, otp) => {
+    try {
+        // Check if transporter is properly configured
+        if (!transporter) {
+            console.error('Email transporter not configured properly');
+            throw new Error('Email service configuration error');
+        }
+
+        console.log(`Attempting to send password reset email to: ${to}`);
+
+        const mailOptions = {
+            from: `"LynqIt" <${process.env.EMAIL_USER}>`,
+            to,
+            subject: '🔒 Reset Your LynqIt Password',
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <!-- Header with gradient background -->
+                    <div style="background: linear-gradient(135deg, #FF5722 0%, #FF9800 100%); padding: 30px 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Password Reset Request</h1>
+                        <p style="color: rgba(255,255,255,0.9); font-size: 18px; margin-top: 10px;">Secure your account</p>
+                    </div>
+
+                    <!-- Main content -->
+                    <div style="background-color: white; padding: 30px 25px; text-align: center;">
+                        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                            We received a request to reset your LynqIt account password. To proceed with the password reset, please use the verification code below:
+                        </p>
+
+                        <!-- OTP Code Box -->
+                        <div style="background: linear-gradient(to right, rgba(255, 87, 34, 0.1), rgba(255, 152, 0, 0.1)); border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px dashed #FF5722;">
+                            <p style="font-size: 16px; color: #FF5722; margin-bottom: 15px; font-weight: 500;">Your password reset code is:</p>
+                            <h2 style="font-size: 38px; letter-spacing: 8px; color: #FF5722; margin: 0; font-weight: 700;">${otp}</h2>
+                            <div style="width: 50px; height: 4px; background: linear-gradient(to right, #FF5722, #FF9800); margin: 15px auto;"></div>
+                            <p style="font-size: 14px; color: #6B7280; margin-top: 15px;">
+                                This code will expire in <span style="font-weight: bold; color: #FF5722;">10 minutes</span>
+                            </p>
+                        </div>
+
+                        <!-- Security note -->
+                        <div style="background-color: #F9FAFB; border-radius: 8px; padding: 15px; margin: 25px 0; text-align: left; border-left: 4px solid #FF5722;">
+                            <p style="color: #4B5563; font-size: 15px; margin: 0;">
+                                <strong style="color: #FF5722;">Security notice:</strong> If you didn't request a password reset, please ignore this email or contact support immediately if you believe your account may be compromised.
+                            </p>
+                        </div>
+
+                        <!-- What's next -->
+                        <div style="margin: 25px 0; text-align: left;">
+                            <h3 style="color: #FF5722; font-size: 18px; margin-bottom: 15px;">Next steps:</h3>
+                            <ol style="color: #4B5563; font-size: 16px; line-height: 1.6; padding-left: 20px; margin-top: 0;">
+                                <li>Enter this code on the password reset page</li>
+                                <li>Create a new secure password</li>
+                                <li>Log in with your new password</li>
+                            </ol>
+                        </div>
+
+                        <!-- Help text -->
+                        <p style="color: #6B7280; font-size: 15px; margin-top: 30px;">
+                            Having trouble? Try <a href="${FRONTEND_URL}" style="color: #FF5722; text-decoration: none; font-weight: 500;">refreshing the page</a> or requesting a new code.
+                        </p>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="background-color: #F3F4F6; padding: 20px; text-align: center;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px 0;">
+                            If you didn't request this code, you can safely ignore this email.
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0 0;">
+                            © ${new Date().getFullYear()} LynqIt. All rights reserved.
+                        </p>
+                    </div>
+                </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Password reset email sent successfully to:', to);
+        console.log('Message ID:', info.messageId);
+
+        return info;
+    } catch (error) {
+        console.error('Error sending password reset email:', error);
+        console.error('Error details:', error.message);
+        if (error.code) {
+            console.error('Error code:', error.code);
+        }
+        throw error;
+    }
+};

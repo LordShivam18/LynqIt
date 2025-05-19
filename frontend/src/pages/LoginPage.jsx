@@ -18,19 +18,19 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Check if the email is from Gmail or Outlook
     const validDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
     const emailDomain = formData.email.split('@')[1]?.toLowerCase();
-    
+
     if (!emailDomain || !validDomains.includes(emailDomain)) {
       toast.error("Only Gmail and Outlook email addresses are allowed");
       return;
     }
-    
+
     login(formData);
   };
-  
+
   const handleGoogleLogin = async (credentialResponse) => {
     const result = await loginWithGoogle(credentialResponse.credential);
     // If successful login, navigate to homepage
@@ -79,6 +79,9 @@ const LoginPage = () => {
             <div className="form-control">
               <label className="label pb-1">
                 <span className="label-text font-medium">Password<span className="text-error">*</span></span>
+                <Link to="/forgot-password" className="label-text-alt link link-primary">
+                  Forgot password?
+                </Link>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -123,7 +126,7 @@ const LoginPage = () => {
             <span className="px-3 text-xs text-base-content/60">OR</span>
             <hr className="flex-1 border-base-300" />
           </div>
-          
+
           {/* Google Login Button */}
           <div className="flex justify-center">
             <div className="google-login-button" title="Sign in with Google">
