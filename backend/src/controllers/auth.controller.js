@@ -371,6 +371,18 @@ export const googleAuth = async (req, res) => {
                 generateToken(newUser._id, res);
                 await newUser.save();
 
+                // Import the sendWelcomeEmail function
+                const { sendWelcomeEmail } = await import("../lib/email.js");
+
+                try {
+                    // Send welcome email to the new user
+                    await sendWelcomeEmail(email, name || 'Google User');
+                    console.log(`Welcome email sent to Google OAuth user: ${email}`);
+                } catch (emailError) {
+                    // Log the error but don't fail the registration process
+                    console.error("Error sending welcome email to Google OAuth user:", emailError);
+                }
+
                 return res.status(201).json({
                     _id: newUser._id,
                     fullName: newUser.fullName,
@@ -388,6 +400,49 @@ export const googleAuth = async (req, res) => {
         }
     } catch (error) {
         console.error("Error in Google auth controller:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+/**
+ * Check if an email exists in the database without sending an OTP
+ * @route POST /api/auth/check-email
+ */
+export const checkEmailExists = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        // Email validation - only allow Gmail and Outlook emails
+        const validEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
+        const emailDomain = email.split('@')[1]?.toLowerCase();
+
+        if (!emailDomain || !validEmailDomains.includes(emailDomain)) {
+            return res.status(400).json({
+                message: "Only Gmail and Outlook email addresses are allowed"
+            });
+        }
+
+        // Check if user exists with this email
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            // Explicitly reveal that the email doesn't exist
+            return res.status(404).json({
+                message: "No account found with this email address"
+            });
+        }
+
+        // Return success response (don't include sensitive user data)
+        res.status(200).json({
+            message: "Email exists",
+            email
+        });
+    } catch (error) {
+        console.error("Error in checkEmailExists controller:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 };
@@ -554,6 +609,7 @@ export const resetPassword = async (req, res) => {
 
         // Import required functions
         const { verifyOTP, deleteOTPs } = await import("../lib/otp.js");
+        const { sendPasswordResetConfirmationEmail } = await import("../lib/email.js");
 
         // Verify OTP
         const isValid = await verifyOTP(email, otp);
@@ -587,6 +643,15 @@ export const resetPassword = async (req, res) => {
 
         // Delete all OTPs for this email
         await deleteOTPs(email);
+
+        // Send password reset confirmation email
+        try {
+            await sendPasswordResetConfirmationEmail(email, user.fullName);
+            console.log(`Password reset confirmation email sent to: ${email}`);
+        } catch (emailError) {
+            // Log the error but don't fail the password reset process
+            console.error("Error sending password reset confirmation email:", emailError);
+        }
 
         res.status(200).json({ message: "Password reset successful" });
     } catch (error) {

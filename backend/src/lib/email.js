@@ -362,3 +362,101 @@ export const sendPasswordResetEmail = async (to, otp) => {
         throw error;
     }
 };
+
+/**
+ * Send a password reset confirmation email
+ * @param {string} to - Recipient email
+ * @param {string} name - User's name
+ * @returns {Promise<Object>} Nodemailer send mail response
+ */
+export const sendPasswordResetConfirmationEmail = async (to, name) => {
+    try {
+        // Check if transporter is properly configured
+        if (!transporter) {
+            console.error('Email transporter not configured properly');
+            throw new Error('Email service configuration error');
+        }
+
+        console.log(`Attempting to send password reset confirmation email to: ${to}`);
+
+        const mailOptions = {
+            from: `"LynqIt" <${process.env.EMAIL_USER}>`,
+            to,
+            subject: '✅ Your LynqIt Password Has Been Reset',
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <!-- Header with gradient background -->
+                    <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 30px 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Password Reset Successful</h1>
+                        <p style="color: rgba(255,255,255,0.9); font-size: 18px; margin-top: 10px;">Your account is now secure</p>
+                    </div>
+
+                    <!-- Main content -->
+                    <div style="background-color: white; padding: 30px 25px; text-align: center;">
+                        <!-- Success icon -->
+                        <div style="margin: 0 auto 20px auto; width: 80px; height: 80px; background-color: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 6L9 17L4 12" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+
+                        <h2 style="color: #10B981; font-size: 24px; margin-bottom: 20px;">Password Reset Complete</h2>
+
+                        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                            Hi ${name || 'there'},
+                        </p>
+
+                        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                            Your LynqIt account password has been successfully reset. You can now log in with your new password.
+                        </p>
+
+                        <!-- Security note -->
+                        <div style="background-color: #F9FAFB; border-radius: 8px; padding: 15px; margin: 25px 0; text-align: left; border-left: 4px solid #10B981;">
+                            <p style="color: #4B5563; font-size: 15px; margin: 0;">
+                                <strong style="color: #10B981;">Security tip:</strong> For your security, please make sure to use a unique password that you don't use on other websites.
+                            </p>
+                        </div>
+
+                        <!-- CTA Button -->
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${FRONTEND_URL}/login" style="display: inline-block; background: linear-gradient(to right, #10B981, #059669); color: white; text-decoration: none; padding: 14px 30px; border-radius: 50px; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">Log In Now →</a>
+                        </div>
+
+                        <!-- Additional info -->
+                        <p style="color: #6B7280; font-size: 15px; margin-top: 30px;">
+                            If you did not reset your password, please contact our support team immediately.
+                        </p>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="background-color: #F3F4F6; padding: 20px; text-align: center;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px 0;">
+                            Need help? Reply to this email or contact our support team.
+                        </p>
+                        <div style="margin-bottom: 15px;">
+                            <a href="#" style="display: inline-block; margin: 0 10px; color: #10B981; text-decoration: none; font-size: 14px;">Help Center</a>
+                            <a href="#" style="display: inline-block; margin: 0 10px; color: #10B981; text-decoration: none; font-size: 14px;">Privacy Policy</a>
+                            <a href="#" style="display: inline-block; margin: 0 10px; color: #10B981; text-decoration: none; font-size: 14px;">Terms of Service</a>
+                        </div>
+                        <p style="color: #9CA3AF; font-size: 12px; margin: 0;">
+                            © ${new Date().getFullYear()} LynqIt. All rights reserved.
+                        </p>
+                    </div>
+                </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Password reset confirmation email sent successfully to:', to);
+        console.log('Message ID:', info.messageId);
+
+        return info;
+    } catch (error) {
+        console.error('Error sending password reset confirmation email:', error);
+        console.error('Error details:', error.message);
+        if (error.code) {
+            console.error('Error code:', error.code);
+        }
+        throw error;
+    }
+};

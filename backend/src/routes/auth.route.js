@@ -9,7 +9,8 @@ import {
     googleAuth,
     deleteAccount,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    checkEmailExists
 } from "../controllers/auth.controller.js";
 import { requestOTP, verifyUserOTP, resendOTP } from "../controllers/otp.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
@@ -30,6 +31,7 @@ router.post("/resend-otp", resendOTP);
 // Password reset routes
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
+router.post("/check-email", checkEmailExists);
 
 router.put("/update-profile", protectRoute, updateProfile);
 

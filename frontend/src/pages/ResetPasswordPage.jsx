@@ -34,30 +34,17 @@ const ResetPasswordPage = () => {
     showCriteria: false
   });
 
-  // Check if email exists in the database
+  // Check if email exists in the database without sending an OTP
   const checkEmailExists = async (emailToCheck) => {
     try {
       setIsCheckingEmail(true);
 
-      // Send a request to check if the email exists
-      // We'll use the forgot-password endpoint which already has the logic to handle this securely
-      const response = await axios.post('/api/auth/forgot-password', { email: emailToCheck });
+      // Use our new endpoint that checks email existence without sending OTP
+      const response = await axios.post('/api/auth/check-email', { email: emailToCheck });
 
-      // If the response includes the email, it means the account exists
-      if (response.data.email) {
+      // If we get a successful response, the email exists
+      if (response.status === 200) {
         setEmailExists(true);
-      } else {
-        // If no email in response, the account doesn't exist
-        // Explicitly tell the user that the email doesn't exist
-        setEmailExists(false);
-
-        // Show an explicit message via toast
-        toast.error(`No account found with email: ${emailToCheck}`);
-
-        // Redirect back to forgot password page after a short delay
-        setTimeout(() => {
-          navigate('/forgot-password');
-        }, 2000);
       }
     } catch (error) {
       console.error('Email check error:', error);
@@ -65,7 +52,7 @@ const ResetPasswordPage = () => {
 
       // Show a more specific error message if possible
       if (error.response?.status === 404) {
-        toast.error(`Email not found: ${emailToCheck}`);
+        toast.error(`No account found with email: ${emailToCheck}`);
       } else {
         toast.error("Something went wrong. Please try again later.");
       }
