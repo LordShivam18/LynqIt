@@ -3,6 +3,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Function to get the appropriate frontend URL based on environment
+const getFrontendUrl = () => {
+    const nodeEnv = process.env.NODE_ENV || 'development';
+
+    if (nodeEnv === 'production') {
+        return process.env.PRODUCTION_URL || 'https://lynqit.onrender.com';
+    } else {
+        return process.env.LOCAL_URL || 'http://localhost:5173';
+    }
+};
+
+// Get the frontend URL
+const FRONTEND_URL = getFrontendUrl();
+
 // Create a Gmail transporter for real email sending
 const createTransporter = () => {
     // Check if required environment variables are set
@@ -122,7 +136,7 @@ export const sendWelcomeEmail = async (to, name) => {
                     </div>
 
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" style="display: inline-block; background-color: #3182ce; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Start Chatting Now</a>
+                        <a href="${FRONTEND_URL}" style="display: inline-block; background-color: #3182ce; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Start Chatting Now</a>
                     </div>
 
                     <div style="color: #718096; font-size: 14px; text-align: center;">
