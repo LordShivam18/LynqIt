@@ -18,4 +18,11 @@ services:
         generateValue: true
       - key: COOKIE_SECRET
         generateValue: true
-    autoDeploy: true 
+      # Email configuration - set these in the Render dashboard
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: FRONTEND_URL
+        value: https://lynqit-chat-app.onrender.com
+    autoDeploy: true

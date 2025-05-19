@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User, Check, X, Info }
 import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import GoogleUsernamePrompt from "../components/GoogleUsernamePrompt";
+import axios from "axios";
 
 import AuthImagePattern from "../components/AuthImagePattern";
 import toast from "react-hot-toast";
@@ -16,7 +17,7 @@ const SignUpPage = () => {
     username: "",
     password: "",
   });
-  
+
   // Password validation criteria
   const passwordCriteria = [
     { id: 'length', label: 'At least 8 characters', regex: /.{8,}/ },
@@ -25,7 +26,7 @@ const SignUpPage = () => {
     { id: 'number', label: 'At least one number', regex: /[0-9]/ },
     { id: 'special', label: 'At least one special character', regex: /[!@#$%^&*()_+]/ }
   ];
-  
+
   const [passwordStrength, setPasswordStrength] = useState({
     criteria: passwordCriteria.map(c => ({ ...c, valid: false })),
     showCriteria: false
@@ -33,14 +34,14 @@ const SignUpPage = () => {
 
   const navigate = useNavigate();
   const { signup, isSigningUp, loginWithGoogle, googleAuthInfo } = useAuthStore();
-  
+
   // Update password validation whenever password changes
   useEffect(() => {
     const updatedCriteria = passwordCriteria.map(criteria => ({
       ...criteria,
       valid: criteria.regex.test(formData.password)
     }));
-    
+
     setPasswordStrength({
       criteria: updatedCriteria,
       showCriteria: formData.password.length > 0
@@ -51,14 +52,14 @@ const SignUpPage = () => {
     if (!formData.fullName.trim()) return toast.error("Full name is required");
     if (!formData.email.trim()) return toast.error("Email is required");
     if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
-    
+
     // Check if the email is from Gmail or Outlook
     const validDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
     const emailDomain = formData.email.split('@')[1]?.toLowerCase();
     if (!emailDomain || !validDomains.includes(emailDomain)) {
       return toast.error("Only Gmail and Outlook email addresses are allowed");
     }
-    
+
     if (!formData.username.trim()) return toast.error("Username is required");
     const usernameRegex = /^[a-zA-Z0-9._]+$/;
     if (!usernameRegex.test(formData.username)) {
@@ -68,7 +69,7 @@ const SignUpPage = () => {
       return toast.error("Username must not exceed 25 characters");
     }
     if (!formData.password) return toast.error("Password is required");
-    
+
     // Check all password criteria
     const allCriteriaValid = passwordStrength.criteria.every(c => c.valid);
     if (!allCriteriaValid) {
@@ -78,14 +79,29 @@ const SignUpPage = () => {
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const success = validateForm();
 
-    if (success === true) signup(formData);
+    if (success === true) {
+      try {
+        // Instead of directly signing up, request OTP first
+        const response = await axios.post('/api/auth/request-otp', formData);
+
+        // If OTP is sent successfully, navigate to OTP verification page
+        if (response.status === 200) {
+          toast.success('Verification code sent to your email');
+          // Navigate to OTP verification page with user data
+          navigate('/verify-otp', { state: { userData: formData } });
+        }
+      } catch (error) {
+        console.error('Request OTP error:', error);
+        toast.error(error.response?.data?.message || 'Failed to send verification code');
+      }
+    }
   };
-  
+
   const handleGoogleSignup = async (credentialResponse) => {
     const result = await loginWithGoogle(credentialResponse.credential);
     // If successful login, navigate to homepage
@@ -201,7 +217,7 @@ const SignUpPage = () => {
                   )}
                 </button>
               </div>
-              
+
               {/* Password Requirements Checklist */}
               {passwordStrength.showCriteria && (
                 <div className="mt-2 bg-base-200 p-3 rounded-lg border">
@@ -209,8 +225,8 @@ const SignUpPage = () => {
                   <ul className="space-y-1">
                     {passwordStrength.criteria.map(criteria => (
                       <li key={criteria.id} className="flex items-center gap-2 text-xs">
-                        {criteria.valid ? 
-                          <Check size={14} className="text-green-500" /> : 
+                        {criteria.valid ?
+                          <Check size={14} className="text-green-500" /> :
                           <X size={14} className="text-red-500" />
                         }
                         {criteria.label}
@@ -221,9 +237,9 @@ const SignUpPage = () => {
               )}
             </div>
 
-            <button 
-              type="submit" 
-              className="btn btn-primary w-full mt-2" 
+            <button
+              type="submit"
+              className="btn btn-primary w-full mt-2"
               disabled={isSigningUp || !passwordStrength.criteria.every(c => c.valid)}
             >
               {isSigningUp ? (
@@ -242,7 +258,7 @@ const SignUpPage = () => {
             <span className="px-3 text-xs text-base-content/60">OR</span>
             <hr className="flex-1 border-base-300" />
           </div>
-          
+
           {/* Google Sign Up Button */}
           <div className="flex justify-center">
             <div className="google-login-button" title="Sign up with Google">
@@ -277,7 +293,7 @@ const SignUpPage = () => {
         title="Join our community"
         subtitle="Connect with friends, share moments, and stay in touch with your loved ones."
       />
-      
+
       {/* Username Prompt for Google Auth */}
       {googleAuthInfo && (
         <GoogleUsernamePrompt onComplete={() => navigate('/')} />

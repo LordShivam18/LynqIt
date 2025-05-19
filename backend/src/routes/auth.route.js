@@ -1,13 +1,20 @@
 import express from "express";
 import { checkAuth, login, logout, signup, updateProfile, getAllUsers, googleAuth, deleteAccount } from "../controllers/auth.controller.js";
+import { requestOTP, verifyUserOTP, resendOTP } from "../controllers/otp.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
+// Standard auth routes
 router.post("/signup", signup);
 router.post("/login", login);
 router.post("/logout", logout);
 router.post("/google", googleAuth);
+
+// OTP verification routes
+router.post("/request-otp", requestOTP);
+router.post("/verify-otp", verifyUserOTP);
+router.post("/resend-otp", resendOTP);
 
 router.put("/update-profile", protectRoute, updateProfile);
 
