@@ -486,10 +486,9 @@ export const forgotPassword = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user) {
-            // For security reasons, don't reveal that the email doesn't exist
-            // Instead, return a success message as if we sent the email
-            return res.status(200).json({
-                message: "If an account with that email exists, a password reset code has been sent"
+            // Explicitly reveal that the email doesn't exist
+            return res.status(404).json({
+                message: "No account found with this email address"
             });
         }
 
@@ -567,7 +566,7 @@ export const resetPassword = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ message: "No account found with this email address" });
         }
 
         // Password strength validation

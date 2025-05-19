@@ -16,6 +16,8 @@ const ResetPasswordPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(true);
+  const [emailExists, setEmailExists] = useState(true);
 
   // Get email from location state
   const email = location.state?.email;
@@ -32,12 +34,60 @@ const ResetPasswordPage = () => {
     showCriteria: false
   });
 
+  // Check if email exists in the database
+  const checkEmailExists = async (emailToCheck) => {
+    try {
+      setIsCheckingEmail(true);
+
+      // Send a request to check if the email exists
+      // We'll use the forgot-password endpoint which already has the logic to handle this securely
+      const response = await axios.post('/api/auth/forgot-password', { email: emailToCheck });
+
+      // If the response includes the email, it means the account exists
+      if (response.data.email) {
+        setEmailExists(true);
+      } else {
+        // If no email in response, the account doesn't exist
+        // Explicitly tell the user that the email doesn't exist
+        setEmailExists(false);
+
+        // Show an explicit message via toast
+        toast.error(`No account found with email: ${emailToCheck}`);
+
+        // Redirect back to forgot password page after a short delay
+        setTimeout(() => {
+          navigate('/forgot-password');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Email check error:', error);
+      setEmailExists(false);
+
+      // Show a more specific error message if possible
+      if (error.response?.status === 404) {
+        toast.error(`Email not found: ${emailToCheck}`);
+      } else {
+        toast.error("Something went wrong. Please try again later.");
+      }
+
+      // Redirect back to forgot password page
+      setTimeout(() => {
+        navigate('/forgot-password');
+      }, 2000);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
   useEffect(() => {
     // If no email is provided, redirect to forgot password
     if (!email) {
       navigate('/forgot-password');
       return;
     }
+
+    // Check if the email exists in the database
+    checkEmailExists(email);
 
     // Start countdown for resend button
     const timer = setInterval(() => {
@@ -99,7 +149,15 @@ const ResetPasswordPage = () => {
       // Handle specific error types
       const errorMessage = error.response?.data?.message || 'Failed to reset password';
 
-      if (error.response?.status === 400 && errorMessage.includes('Invalid or expired')) {
+      if (error.response?.status === 404) {
+        // User not found - explicitly tell the user
+        toast.error(`No account found with email: ${email}`);
+
+        // Redirect back to forgot password page after a short delay
+        setTimeout(() => {
+          navigate('/forgot-password');
+        }, 2000);
+      } else if (error.response?.status === 400 && errorMessage.includes('Invalid or expired')) {
         // Invalid OTP
         toast.error('Invalid verification code. Please try again or request a new code.');
       } else if (error.response?.status === 400) {
@@ -118,30 +176,51 @@ const ResetPasswordPage = () => {
     try {
       setIsResending(true);
 
-      await axios.post('/api/auth/forgot-password', {
+      const response = await axios.post('/api/auth/forgot-password', {
         email
       });
 
-      toast.success('Verification code resent successfully');
+      // Check if the response includes the email (meaning the account exists)
+      if (response.data.email) {
+        toast.success('Verification code resent successfully');
 
-      // Reset countdown
-      setCountdown(60);
-      setCanResend(false);
+        // Reset countdown
+        setCountdown(60);
+        setCanResend(false);
 
-      // Start countdown again
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+        // Start countdown again
+        const timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              setCanResend(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        // If no email in response, the account doesn't exist
+        // Explicitly tell the user that the email doesn't exist
+        toast.error(`No account found with email: ${email}`);
+
+        // Redirect back to forgot password page after a short delay
+        setTimeout(() => {
+          navigate('/forgot-password');
+        }, 2000);
+      }
     } catch (error) {
       console.error('Resend OTP error:', error);
-      toast.error('Failed to resend verification code');
+
+      // If there's a specific error about the user not existing, be explicit
+      if (error.response?.status === 404) {
+        toast.error(`Email not found: ${email}`);
+        setTimeout(() => {
+          navigate('/forgot-password');
+        }, 2000);
+      } else {
+        toast.error('Failed to resend verification code');
+      }
     } finally {
       setIsResending(false);
     }
@@ -172,6 +251,32 @@ const ResetPasswordPage = () => {
         <AuthImagePattern
           title="Success!"
           subtitle="Your password has been reset. You can now log in with your new credentials."
+        />
+      </div>
+    );
+  }
+
+  // Show loading state while checking email
+  if (isCheckingEmail) {
+    return (
+      <div className="h-screen grid lg:grid-cols-2">
+        {/* Left Side - Loading */}
+        <div className="flex flex-col justify-center items-center p-6 sm:p-12">
+          <div className="w-full max-w-md text-center">
+            <div className="flex justify-center mb-6">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Verifying Your Request</h2>
+            <p className="text-base-content/70">
+              Please wait while we process your request...
+            </p>
+          </div>
+        </div>
+
+        {/* Right Side - Image/Pattern */}
+        <AuthImagePattern
+          title="Reset your password"
+          subtitle="We'll help you get back into your account safely and securely."
         />
       </div>
     );

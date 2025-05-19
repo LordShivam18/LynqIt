@@ -13,41 +13,47 @@ const ForgotPasswordPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Email validation - only allow Gmail and Outlook emails
     const validDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
     const emailDomain = email.split('@')[1]?.toLowerCase();
-    
+
     if (!emailDomain || !validDomains.includes(emailDomain)) {
       toast.error("Only Gmail and Outlook email addresses are allowed");
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
-      
+
       const response = await axios.post('/api/auth/forgot-password', { email });
-      
+
       if (response.status === 200) {
         setIsSuccess(true);
-        
+
         // If the response includes the email, it means the account exists
         // and we can navigate to the reset page
         if (response.data.email) {
+          toast.success('Password reset code sent successfully');
           setTimeout(() => {
             navigate('/reset-password', { state: { email } });
           }, 2000);
         } else {
-          // If no email in response, we still show success but don't navigate
-          // (this is for security - we don't want to reveal if an email exists or not)
-          toast.success(response.data.message);
+          // If no email in response, explicitly tell the user that the account doesn't exist
+          setIsSuccess(false);
+          toast.error(`No account found with email: ${email}`);
         }
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      
-      const errorMessage = error.response?.data?.message || 'Failed to process request';
-      toast.error(errorMessage);
+
+      // If there's a specific error about the user not existing, be explicit
+      if (error.response?.status === 404) {
+        toast.error(`No account found with email: ${email}`);
+      } else {
+        const errorMessage = error.response?.data?.message || 'Failed to process request';
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +69,7 @@ const ForgotPasswordPage = () => {
             <ArrowLeft className="size-4 mr-2" />
             Back to Login
           </Link>
-          
+
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Forgot Password</h1>
@@ -81,7 +87,7 @@ const ForgotPasswordPage = () => {
               </div>
               <h2 className="text-xl font-semibold mb-2">Check Your Email</h2>
               <p className="text-base-content/70">
-                If an account exists with {email}, we've sent a password reset code.
+                We've sent a password reset code to {email}.
               </p>
             </div>
           ) : (
