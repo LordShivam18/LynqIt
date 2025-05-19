@@ -7,9 +7,13 @@ dotenv.config();
 const createTransporter = () => {
     // Check if required environment variables are set
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-        console.warn('WARNING: EMAIL_USER or EMAIL_PASSWORD not set in .env file');
-        console.warn('Email functionality may not work correctly');
+        console.error('ERROR: EMAIL_USER or EMAIL_PASSWORD not set in .env file');
+        console.error('Email functionality will not work correctly');
+        // Return null to indicate configuration error
+        return null;
     }
+
+    console.log('Creating email transporter with user:', process.env.EMAIL_USER);
 
     // Create and return the transporter
     return nodemailer.createTransport({
@@ -21,7 +25,8 @@ const createTransporter = () => {
         // Additional options for better deliverability
         tls: {
             rejectUnauthorized: false
-        }
+        },
+        debug: true // Enable debug logs
     });
 };
 
@@ -36,6 +41,14 @@ const transporter = createTransporter();
  */
 export const sendOTPEmail = async (to, otp) => {
     try {
+        // Check if transporter is properly configured
+        if (!transporter) {
+            console.error('Email transporter not configured properly');
+            throw new Error('Email service configuration error');
+        }
+
+        console.log(`Attempting to send OTP email to: ${to}`);
+
         const mailOptions = {
             from: `"LynqIt" <${process.env.EMAIL_USER}>`,
             to,
@@ -68,6 +81,10 @@ export const sendOTPEmail = async (to, otp) => {
         return info;
     } catch (error) {
         console.error('Error sending OTP email:', error);
+        console.error('Error details:', error.message);
+        if (error.code) {
+            console.error('Error code:', error.code);
+        }
         throw error;
     }
 };
@@ -80,6 +97,14 @@ export const sendOTPEmail = async (to, otp) => {
  */
 export const sendWelcomeEmail = async (to, name) => {
     try {
+        // Check if transporter is properly configured
+        if (!transporter) {
+            console.error('Email transporter not configured properly');
+            throw new Error('Email service configuration error');
+        }
+
+        console.log(`Attempting to send welcome email to: ${to}`);
+
         const mailOptions = {
             from: `"LynqIt" <${process.env.EMAIL_USER}>`,
             to,
@@ -115,6 +140,10 @@ export const sendWelcomeEmail = async (to, name) => {
         return info;
     } catch (error) {
         console.error('Error sending welcome email:', error);
+        console.error('Error details:', error.message);
+        if (error.code) {
+            console.error('Error code:', error.code);
+        }
         throw error;
     }
 };

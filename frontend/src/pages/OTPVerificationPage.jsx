@@ -12,17 +12,17 @@ const OTPVerificationPage = () => {
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  
+
   // Get user data from location state
   const userData = location.state?.userData;
-  
+
   useEffect(() => {
     // If no userData is provided, redirect to signup
     if (!userData) {
       navigate('/signup');
       return;
     }
-    
+
     // Start countdown for resend button
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -34,16 +34,16 @@ const OTPVerificationPage = () => {
         return prev - 1;
       });
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [userData, navigate]);
-  
+
   const handleOTPComplete = async (otp) => {
     if (otp.length !== 6) return;
-    
+
     try {
       setIsVerifying(true);
-      
+
       const response = await axios.post('/api/auth/verify-otp', {
         email: userData.email,
         otp,
@@ -51,34 +51,62 @@ const OTPVerificationPage = () => {
         username: userData.username,
         password: userData.password
       });
-      
+
       // Save user data to local storage
       localStorage.setItem('userInfo', JSON.stringify(response.data));
-      
+
       toast.success('Email verified successfully!');
       navigate('/');
     } catch (error) {
       console.error('OTP verification error:', error);
-      toast.error(error.response?.data?.message || 'Failed to verify OTP');
+
+      // Handle specific error types
+      const errorType = error.response?.data?.error;
+      const errorMessage = error.response?.data?.message || 'Failed to verify OTP';
+
+      if (errorType === 'email_service_error') {
+        // Email service related errors
+        toast.error(errorMessage, { duration: 5000 });
+        toast.error('Account created but welcome email could not be sent. You can still proceed.', {
+          duration: 5000,
+          id: 'welcome-email-error'
+        });
+
+        // Try to navigate to home if the account was created despite email error
+        try {
+          navigate('/');
+        } catch (navError) {
+          console.error('Navigation error:', navError);
+        }
+      } else if (error.response?.status === 400 && errorMessage.includes('Invalid or expired OTP')) {
+        // Invalid OTP
+        toast.error('Invalid verification code. Please try again or request a new code.');
+      } else if (error.response?.status === 400) {
+        // Other validation errors
+        toast.error(errorMessage);
+      } else {
+        // Generic server error
+        toast.error('Server error. Please try again later.');
+      }
     } finally {
       setIsVerifying(false);
     }
   };
-  
+
   const handleResendOTP = async () => {
     try {
       setIsResending(true);
-      
+
       await axios.post('/api/auth/resend-otp', {
         email: userData.email
       });
-      
-      toast.success('OTP resent successfully');
-      
+
+      toast.success('Verification code resent successfully');
+
       // Reset countdown
       setCountdown(60);
       setCanResend(false);
-      
+
       // Start countdown again
       const timer = setInterval(() => {
         setCountdown((prev) => {
@@ -92,12 +120,36 @@ const OTPVerificationPage = () => {
       }, 1000);
     } catch (error) {
       console.error('Resend OTP error:', error);
-      toast.error(error.response?.data?.message || 'Failed to resend OTP');
+
+      // Handle specific error types
+      const errorType = error.response?.data?.error;
+      const errorMessage = error.response?.data?.message || 'Failed to resend verification code';
+
+      if (errorType === 'email_service_error' ||
+          errorType === 'email_auth_error' ||
+          errorType === 'email_connection_error') {
+        // Email service related errors
+        toast.error(errorMessage, { duration: 5000 });
+
+        // Show a more detailed error for email service issues
+        if (errorType === 'email_service_error') {
+          toast.error('Please try again later or use a different email address', {
+            duration: 5000,
+            id: 'email-service-suggestion'
+          });
+        }
+      } else if (error.response?.status === 400) {
+        // Validation errors (bad request)
+        toast.error(errorMessage);
+      } else {
+        // Generic server error
+        toast.error('Server error. Please try again later.');
+      }
     } finally {
       setIsResending(false);
     }
   };
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
@@ -106,14 +158,14 @@ const OTPVerificationPage = () => {
             <Mail size={32} className="text-blue-600" />
           </div>
         </div>
-        
+
         <h2 className="text-2xl font-bold text-center mb-2">Verify Your Email</h2>
         <p className="text-gray-600 text-center mb-6">
           We've sent a verification code to <span className="font-medium">{userData?.email}</span>
         </p>
-        
+
         <OTPInput length={6} onComplete={handleOTPComplete} />
-        
+
         <div className="mt-6">
           <button
             onClick={() => {}}
@@ -123,7 +175,7 @@ const OTPVerificationPage = () => {
             {isVerifying ? 'Verifying...' : 'Verify Email'}
           </button>
         </div>
-        
+
         <div className="mt-4 text-center">
           <p className="text-gray-600 text-sm">
             Didn't receive the code?{' '}
@@ -142,7 +194,7 @@ const OTPVerificationPage = () => {
             )}
           </p>
         </div>
-        
+
         <div className="mt-6 text-center">
           <button
             onClick={() => navigate('/signup')}

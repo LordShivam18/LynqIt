@@ -97,7 +97,31 @@ const SignUpPage = () => {
         }
       } catch (error) {
         console.error('Request OTP error:', error);
-        toast.error(error.response?.data?.message || 'Failed to send verification code');
+
+        // Handle specific error types
+        const errorType = error.response?.data?.error;
+        const errorMessage = error.response?.data?.message || 'Failed to send verification code';
+
+        if (errorType === 'email_service_error' ||
+            errorType === 'email_auth_error' ||
+            errorType === 'email_connection_error') {
+          // Email service related errors
+          toast.error(errorMessage, { duration: 5000 });
+
+          // Show a more detailed error for email service issues
+          if (errorType === 'email_service_error') {
+            toast.error('Please try again later or use a different email address', {
+              duration: 5000,
+              id: 'email-service-suggestion'
+            });
+          }
+        } else if (error.response?.status === 400) {
+          // Validation errors (bad request)
+          toast.error(errorMessage);
+        } else {
+          // Generic server error
+          toast.error('Server error. Please try again later.');
+        }
       }
     }
   };

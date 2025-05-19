@@ -20,10 +20,10 @@ export const requestOTP = async (req, res) => {
         // Email validation - only allow Gmail and Outlook emails
         const validEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
         const emailDomain = email.split('@')[1]?.toLowerCase();
-        
+
         if (!emailDomain || !validEmailDomains.includes(emailDomain)) {
-            return res.status(400).json({ 
-                message: "Only Gmail and Outlook email addresses are allowed" 
+            return res.status(400).json({
+                message: "Only Gmail and Outlook email addresses are allowed"
             });
         }
 
@@ -42,7 +42,7 @@ export const requestOTP = async (req, res) => {
                 message: "Username can only include letters, numbers, and characters like . and _"
             });
         }
-        
+
         // Enforce username length limit
         if (username.length > 25) {
             return res.status(400).json({
@@ -64,21 +64,49 @@ export const requestOTP = async (req, res) => {
 
         // Generate OTP
         const otp = generateOTP();
-        
+
         // Save OTP to database (hashed)
         await saveOTP(email, otp);
-        
+
         // Send OTP email
         await sendOTPEmail(email, otp);
-        
+
         // Return success response (don't include OTP in response)
-        res.status(200).json({ 
+        res.status(200).json({
             message: "OTP sent successfully",
             email
         });
     } catch (error) {
         console.error("Error in requestOTP controller:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+
+        // Provide more specific error messages based on the error type
+        if (error.message === 'Email service configuration error') {
+            return res.status(500).json({
+                message: "Email service is currently unavailable. Please try again later.",
+                error: "email_service_error"
+            });
+        }
+
+        // Handle nodemailer specific errors
+        if (error.code === 'EAUTH') {
+            return res.status(500).json({
+                message: "Email authentication failed. Please contact support.",
+                error: "email_auth_error"
+            });
+        }
+
+        if (error.code === 'ESOCKET' || error.code === 'ECONNECTION') {
+            return res.status(500).json({
+                message: "Could not connect to email server. Please try again later.",
+                error: "email_connection_error"
+            });
+        }
+
+        // Default error message
+        res.status(500).json({
+            message: "Failed to send verification code. Please try again later.",
+            error: "internal_server_error"
+        });
     }
 };
 
@@ -89,24 +117,24 @@ export const requestOTP = async (req, res) => {
 export const verifyUserOTP = async (req, res) => {
     try {
         const { email, otp, fullName, username, password } = req.body;
-        
+
         if (!email || !otp || !fullName || !username || !password) {
             return res.status(400).json({ message: "All fields are required" });
         }
-        
+
         // Verify OTP
         const isValid = await verifyOTP(email, otp);
-        
+
         if (!isValid) {
             return res.status(400).json({ message: "Invalid or expired OTP" });
         }
-        
+
         // OTP is valid, create the user
-        
+
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        
+
         // Create user
         const newUser = new User({
             fullName,
@@ -114,17 +142,17 @@ export const verifyUserOTP = async (req, res) => {
             password: hashedPassword,
             username,
         });
-        
+
         // Generate JWT and save user
         generateToken(newUser._id, res);
         await newUser.save();
-        
+
         // Delete all OTPs for this email
         await deleteOTPs(email);
-        
+
         // Send welcome email
         await sendWelcomeEmail(email, fullName);
-        
+
         res.status(201).json({
             _id: newUser._id,
             fullName: newUser.fullName,
@@ -134,7 +162,28 @@ export const verifyUserOTP = async (req, res) => {
         });
     } catch (error) {
         console.error("Error in verifyOTP controller:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+
+        // Provide more specific error messages based on the error type
+        if (error.message === 'Email service configuration error') {
+            return res.status(500).json({
+                message: "Email service is currently unavailable. Please try again later.",
+                error: "email_service_error"
+            });
+        }
+
+        // Handle database errors
+        if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+            return res.status(500).json({
+                message: "Database error occurred. Please try again later.",
+                error: "database_error"
+            });
+        }
+
+        // Default error message
+        res.status(500).json({
+            message: "Failed to verify OTP. Please try again later.",
+            error: "internal_server_error"
+        });
     }
 };
 
@@ -145,27 +194,55 @@ export const verifyUserOTP = async (req, res) => {
 export const resendOTP = async (req, res) => {
     try {
         const { email } = req.body;
-        
+
         if (!email) {
             return res.status(400).json({ message: "Email is required" });
         }
-        
+
         // Generate new OTP
         const otp = generateOTP();
-        
+
         // Save OTP to database (hashed)
         await saveOTP(email, otp);
-        
+
         // Send OTP email
         await sendOTPEmail(email, otp);
-        
+
         // Return success response
-        res.status(200).json({ 
+        res.status(200).json({
             message: "OTP resent successfully",
             email
         });
     } catch (error) {
         console.error("Error in resendOTP controller:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+
+        // Provide more specific error messages based on the error type
+        if (error.message === 'Email service configuration error') {
+            return res.status(500).json({
+                message: "Email service is currently unavailable. Please try again later.",
+                error: "email_service_error"
+            });
+        }
+
+        // Handle nodemailer specific errors
+        if (error.code === 'EAUTH') {
+            return res.status(500).json({
+                message: "Email authentication failed. Please contact support.",
+                error: "email_auth_error"
+            });
+        }
+
+        if (error.code === 'ESOCKET' || error.code === 'ECONNECTION') {
+            return res.status(500).json({
+                message: "Could not connect to email server. Please try again later.",
+                error: "email_connection_error"
+            });
+        }
+
+        // Default error message
+        res.status(500).json({
+            message: "Failed to resend verification code. Please try again later.",
+            error: "internal_server_error"
+        });
     }
 };
