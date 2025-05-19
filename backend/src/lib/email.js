@@ -66,23 +66,62 @@ export const sendOTPEmail = async (to, otp) => {
         const mailOptions = {
             from: `"LynqIt" <${process.env.EMAIL_USER}>`,
             to,
-            subject: 'Email Verification Code',
+            subject: '🔐 Your LynqIt Verification Code',
             html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h1 style="color: #4a5568; margin-bottom: 10px;">Verify Your Email</h1>
-                        <p style="color: #718096; font-size: 16px;">Thanks for signing up with LynqIt!</p>
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <!-- Header with gradient background -->
+                    <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Verify Your Email</h1>
+                        <p style="color: rgba(255,255,255,0.9); font-size: 18px; margin-top: 10px;">One step away from joining LynqIt!</p>
                     </div>
 
-                    <div style="background-color: #f7fafc; padding: 20px; border-radius: 5px; text-align: center; margin-bottom: 20px;">
-                        <p style="font-size: 16px; color: #4a5568; margin-bottom: 10px;">Your verification code is:</p>
-                        <h2 style="font-size: 32px; letter-spacing: 5px; color: #3182ce; margin: 0;">${otp}</h2>
-                        <p style="font-size: 14px; color: #718096; margin-top: 10px;">This code will expire in 10 minutes.</p>
+                    <!-- Main content -->
+                    <div style="background-color: white; padding: 30px 25px; text-align: center;">
+                        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                            Thanks for signing up with LynqIt! To complete your registration, please enter the verification code below:
+                        </p>
+
+                        <!-- OTP Code Box -->
+                        <div style="background: linear-gradient(to right, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.1)); border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px dashed #4F46E5;">
+                            <p style="font-size: 16px; color: #4F46E5; margin-bottom: 15px; font-weight: 500;">Your verification code is:</p>
+                            <h2 style="font-size: 38px; letter-spacing: 8px; color: #4F46E5; margin: 0; font-weight: 700;">${otp}</h2>
+                            <div style="width: 50px; height: 4px; background: linear-gradient(to right, #4F46E5, #7C3AED); margin: 15px auto;"></div>
+                            <p style="font-size: 14px; color: #6B7280; margin-top: 15px;">
+                                This code will expire in <span style="font-weight: bold; color: #4F46E5;">10 minutes</span>
+                            </p>
+                        </div>
+
+                        <!-- Security note -->
+                        <div style="background-color: #F9FAFB; border-radius: 8px; padding: 15px; margin: 25px 0; text-align: left; border-left: 4px solid #4F46E5;">
+                            <p style="color: #4B5563; font-size: 15px; margin: 0;">
+                                <strong style="color: #4F46E5;">Security tip:</strong> Never share this code with anyone. LynqIt will never ask for your code via phone or message.
+                            </p>
+                        </div>
+
+                        <!-- What's next -->
+                        <div style="margin: 25px 0; text-align: left;">
+                            <h3 style="color: #4F46E5; font-size: 18px; margin-bottom: 15px;">What happens next?</h3>
+                            <ol style="color: #4B5563; font-size: 16px; line-height: 1.6; padding-left: 20px; margin-top: 0;">
+                                <li>Enter this code on the verification page</li>
+                                <li>Complete your profile setup</li>
+                                <li>Start connecting with friends!</li>
+                            </ol>
+                        </div>
+
+                        <!-- Help text -->
+                        <p style="color: #6B7280; font-size: 15px; margin-top: 30px;">
+                            Having trouble? Try <a href="${FRONTEND_URL}" style="color: #4F46E5; text-decoration: none; font-weight: 500;">refreshing the page</a> or requesting a new code.
+                        </p>
                     </div>
 
-                    <div style="color: #718096; font-size: 14px; text-align: center;">
-                        <p>If you didn't request this code, you can safely ignore this email.</p>
-                        <p>© ${new Date().getFullYear()} LynqIt. All rights reserved.</p>
+                    <!-- Footer -->
+                    <div style="background-color: #F3F4F6; padding: 20px; text-align: center;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px 0;">
+                            If you didn't request this code, you can safely ignore this email.
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0 0;">
+                            © ${new Date().getFullYear()} LynqIt. All rights reserved.
+                        </p>
                     </div>
                 </div>
             `
@@ -122,26 +161,93 @@ export const sendWelcomeEmail = async (to, name) => {
         const mailOptions = {
             from: `"LynqIt" <${process.env.EMAIL_USER}>`,
             to,
-            subject: 'Welcome to LynqIt!',
+            subject: '🎉 Welcome to LynqIt! Your Journey Begins Now',
             html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h1 style="color: #4a5568; margin-bottom: 10px;">Welcome to LynqIt!</h1>
-                        <p style="color: #718096; font-size: 16px;">Hi ${name}, we're excited to have you on board!</p>
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <!-- Header with gradient background -->
+                    <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Welcome to LynqIt!</h1>
+                        <p style="color: rgba(255,255,255,0.9); font-size: 18px; margin-top: 10px;">Your new communication hub</p>
                     </div>
 
-                    <div style="background-color: #f7fafc; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
-                        <p style="font-size: 16px; color: #4a5568;">Your account has been successfully created and verified.</p>
-                        <p style="font-size: 16px; color: #4a5568;">You can now start connecting with friends, sending messages, and enjoying all the features LynqIt has to offer.</p>
+                    <!-- Personalized greeting -->
+                    <div style="background-color: white; padding: 30px 25px;">
+                        <h2 style="color: #4F46E5; font-size: 22px; margin-top: 0;">Hey ${name}! 👋</h2>
+                        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                            We're thrilled to have you join our community! Your account has been successfully created and verified.
+                        </p>
+
+                        <!-- Features section -->
+                        <div style="background-color: #F9FAFB; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                            <h3 style="color: #4F46E5; font-size: 18px; margin-top: 0;">Here's what you can do with LynqIt:</h3>
+
+                            <div style="display: block; margin: 15px 0;">
+                                <div style="display: inline-block; vertical-align: top; width: 30px;">
+                                    <span style="background-color: #4F46E5; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-block; text-align: center; line-height: 24px; font-weight: bold;">✓</span>
+                                </div>
+                                <div style="display: inline-block; width: calc(100% - 35px);">
+                                    <p style="margin: 0; color: #4B5563; font-size: 16px;"><strong>Connect</strong> with friends and colleagues instantly</p>
+                                </div>
+                            </div>
+
+                            <div style="display: block; margin: 15px 0;">
+                                <div style="display: inline-block; vertical-align: top; width: 30px;">
+                                    <span style="background-color: #4F46E5; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-block; text-align: center; line-height: 24px; font-weight: bold;">✓</span>
+                                </div>
+                                <div style="display: inline-block; width: calc(100% - 35px);">
+                                    <p style="margin: 0; color: #4B5563; font-size: 16px;"><strong>Share</strong> photos, videos, and documents seamlessly</p>
+                                </div>
+                            </div>
+
+                            <div style="display: block; margin: 15px 0;">
+                                <div style="display: inline-block; vertical-align: top; width: 30px;">
+                                    <span style="background-color: #4F46E5; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-block; text-align: center; line-height: 24px; font-weight: bold;">✓</span>
+                                </div>
+                                <div style="display: inline-block; width: calc(100% - 35px);">
+                                    <p style="margin: 0; color: #4B5563; font-size: 16px;"><strong>Enjoy</strong> real-time messaging with read receipts</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Getting started tips -->
+                        <div style="margin-bottom: 30px;">
+                            <h3 style="color: #4F46E5; font-size: 18px;">Quick tips to get started:</h3>
+                            <ol style="color: #4B5563; font-size: 16px; line-height: 1.6; padding-left: 20px;">
+                                <li>Complete your profile with a photo and bio</li>
+                                <li>Find friends using their email or username</li>
+                                <li>Start your first conversation today!</li>
+                            </ol>
+                        </div>
+
+                        <!-- CTA Button -->
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${FRONTEND_URL}" style="display: inline-block; background: linear-gradient(to right, #4F46E5, #7C3AED); color: white; text-decoration: none; padding: 14px 30px; border-radius: 50px; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">Start Chatting Now →</a>
+                        </div>
+
+                        <!-- Social proof -->
+                        <div style="background-color: #F9FAFB; border-radius: 8px; padding: 15px; margin-top: 20px; text-align: center;">
+                            <p style="color: #6B7280; font-size: 15px; font-style: italic; margin: 0;">
+                                "LynqIt has transformed how our team communicates. It's simple, fast, and reliable!"
+                            </p>
+                            <p style="color: #4B5563; font-size: 14px; font-weight: bold; margin-top: 10px; margin-bottom: 0;">
+                                - The LynqIt Team
+                            </p>
+                        </div>
                     </div>
 
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <a href="${FRONTEND_URL}" style="display: inline-block; background-color: #3182ce; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Start Chatting Now</a>
-                    </div>
-
-                    <div style="color: #718096; font-size: 14px; text-align: center;">
-                        <p>If you have any questions, feel free to reply to this email.</p>
-                        <p>© ${new Date().getFullYear()} LynqIt. All rights reserved.</p>
+                    <!-- Footer -->
+                    <div style="background-color: #F3F4F6; padding: 20px; text-align: center;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px 0;">
+                            Need help? Reply to this email or contact our support team.
+                        </p>
+                        <div style="margin-bottom: 15px;">
+                            <a href="#" style="display: inline-block; margin: 0 10px; color: #4F46E5; text-decoration: none; font-size: 14px;">Help Center</a>
+                            <a href="#" style="display: inline-block; margin: 0 10px; color: #4F46E5; text-decoration: none; font-size: 14px;">Privacy Policy</a>
+                            <a href="#" style="display: inline-block; margin: 0 10px; color: #4F46E5; text-decoration: none; font-size: 14px;">Terms of Service</a>
+                        </div>
+                        <p style="color: #9CA3AF; font-size: 12px; margin: 0;">
+                            © ${new Date().getFullYear()} LynqIt. All rights reserved.
+                        </p>
                     </div>
                 </div>
             `
