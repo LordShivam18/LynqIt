@@ -10,8 +10,7 @@ import { X, FileText, Film, Smile, Check, Info, Trash2, MoreVertical, AlertCircl
 import EmojiPicker from "emoji-picker-react";
 import EditMessageModal from "./EditMessageModal";
 
-const ChatContainer = () => {
-  const {
+const ChatContainer = () => {  const {
     messages,
     getMessages,
     isMessagesLoading,
@@ -20,7 +19,8 @@ const ChatContainer = () => {
     deleteMessage,
     connectionStatus,
     resendMessage,
-    handleSocketReconnect
+    handleSocketReconnect,
+    isDeletingMessage
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
@@ -29,10 +29,12 @@ const ChatContainer = () => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const emojiPickerRef = useRef(null);
+  const [showEditModal, setShowEditModal] = useState(false);  const emojiPickerRef = useRef(null);
   const moreOptionsRef = useRef(null);
   const [showMessageOptions, setShowMessageOptions] = useState(null);
+  
+  // Store the current active menu ref for better tracking
+  const activeMenuRef = useRef(null);
   
   // Common reaction emojis for quick access
   const quickReactions = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -48,19 +50,26 @@ const ChatContainer = () => {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
-
   useEffect(() => {
-    // Handle click outside for emoji picker
+    // Handle click outside for emoji picker and message options
     const handleClickOutside = (e) => {
+      // Close emoji picker if clicked outside
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
         setShowReactionPicker(null);
       }
       
-      if (moreOptionsRef.current && !moreOptionsRef.current.contains(e.target)) {
-        setShowMessageOptions(null);
+      // Close message options if clicked outside
+      if (showMessageOptions && moreOptionsRef.current && !moreOptionsRef.current.contains(e.target)) {
+        // Check if the click was on a menu toggle button
+        const isMenuToggleClick = e.target.closest('[data-message-menu-toggle]');
+        if (!isMenuToggleClick) {
+          console.log("Clicked outside message options, closing menu");
+          setShowMessageOptions(null);
+        }
       }
     };
 
+    // Add event listener when either picker is open
     if (showReactionPicker || showMessageOptions) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
@@ -120,28 +129,45 @@ const ChatContainer = () => {
     setSelectedMessage(message);
     setShowInfoModal(true);
   };
-  
   const openDeleteModal = (message) => {
-    setSelectedMessage(message);
-    setShowDeleteModal(true);
+    console.log("Opening delete modal for message:", message);
+    // First close the dropdown menu
     setShowMessageOptions(null);
+    // Then set up the delete modal
+    setTimeout(() => {
+      setSelectedMessage(message);
+      setShowDeleteModal(true);
+    }, 10);
   };
   
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
     setSelectedMessage(null);
   };
-  
   const handleDeleteMessage = (deleteType) => {
     if (selectedMessage) {
+      console.log(`Deleting message ${selectedMessage._id} with type: ${deleteType}`);
+      // Show an alert for debugging
+      alert(`Attempting to delete message: ${deleteType}`);
+      // Call the deleteMessage function from useChatStore
       deleteMessage(selectedMessage._id, deleteType);
       closeDeleteModal();
+    } else {
+      console.error("No message selected for deletion");
+      alert("Error: No message selected for deletion");
     }
   };
-  
-  const toggleMessageOptions = (messageId, event) => {
+    const toggleMessageOptions = (messageId, event) => {
     event.stopPropagation();
-    setShowMessageOptions(showMessageOptions === messageId ? null : messageId);
+    console.log("Toggle menu for message:", messageId, "Current state:", showMessageOptions);
+    
+    // If this message's menu is already open, close it
+    if (showMessageOptions === messageId) {
+      setShowMessageOptions(null);
+    } else {
+      // Otherwise, close any open menu and open this one
+      setShowMessageOptions(messageId);
+    }
   };
   
   const closeInfoModal = () => {
@@ -472,54 +498,54 @@ const ChatContainer = () => {
               key={message._id}
               className={`chat ${isMyMessage ? "chat-end" : "chat-start"}`}
               ref={message === messages[messages.length - 1] ? messageEndRef : null}
-            >
-              <div className="chat-header mb-1 flex items-center">
+            >              <div className="chat-header mb-1 flex items-center">
               <time className="text-xs opacity-50 ml-1">
                 {formatMessageTime(message.createdAt)}
               </time>
-                <div className="relative ml-1">
-                  <button 
-                    className="opacity-50 hover:opacity-100"
+                <div className="relative ml-1">                  <button 
+                    className="btn btn-ghost btn-xs btn-circle opacity-70 hover:opacity-100"
                     onClick={(e) => toggleMessageOptions(message._id, e)}
+                    data-message-menu-toggle="true"
+                    aria-label="Message options"
                   >
                     <MoreVertical size={14} />
                   </button>
-                  
-                  {/* Message options dropdown */}
+                    {/* Message options dropdown */}
                   {showMessageOptions === message._id && (
                     <div 
                       ref={moreOptionsRef}
-                      className="absolute top-full right-0 mt-1 bg-base-200 rounded-lg shadow-lg z-20 w-40"
+                      className={`absolute top-full ${isMyMessage ? 'right-0' : 'left-0'} mt-1 bg-base-200 rounded-lg shadow-lg z-50 overflow-hidden w-40`}
+                      style={{ 
+                        maxHeight: '200px', 
+                        overflowY: 'auto',
+                        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)'
+                      }}
                     >
-                      <div className="py-1">
-                        {isMyMessage && (
-                          <>
-                            <button 
-                              className="px-4 py-2 text-sm w-full text-left hover:bg-base-300 flex items-center gap-2"
-                              onClick={() => handleMessageInfo(message)}
-                            >
-                              <Info size={14} />
-                              <span>Info</span>
+                      <ul className="menu menu-sm p-0">
+                        <li>
+                          <button onClick={() => handleMessageInfo(message)}>
+                            <Info size={14} />
+                            <span>Info</span>
+                          </button>
+                        </li>
+                        
+                        {isMyMessage && canEditMessage(message) && (
+                          <li>
+                            <button onClick={() => handleEditMessage(message)}>
+                              <Edit size={14} />
+                              <span>Edit</span>
                             </button>
-                            {canEditMessage(message) && (
-                              <button 
-                                className="px-4 py-2 text-sm w-full text-left hover:bg-base-300 flex items-center gap-2"
-                                onClick={() => handleEditMessage(message)}
-                              >
-                                <Edit size={14} />
-                                <span>Edit</span>
-                              </button>
-                            )}
-                          </>
-                        )}
-                        <button 
-                          className="px-4 py-2 text-sm w-full text-left hover:bg-base-300 flex items-center gap-2 text-error"
-                          onClick={() => openDeleteModal(message)}
-                        >
-                          <Trash2 size={14} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
+                          </li>
+                        )}                        <li className="bg-error/10 hover:bg-error/20">
+                          <button 
+                            onClick={() => openDeleteModal(message)}
+                            className="text-error font-bold flex items-center gap-2"
+                          >
+                            <Trash2 size={16} className="flex-shrink-0" />
+                            <span>Delete Message</span>
+                          </button>
+                        </li>
+                      </ul>
                     </div>
                   )}
                 </div>
@@ -699,8 +725,7 @@ const ChatContainer = () => {
           </div>
       </div>
       )}
-      
-      {/* Delete Message Modal */}
+        {/* Delete Message Modal */}
       {showDeleteModal && selectedMessage && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closeDeleteModal}>
           <div className="bg-base-300 rounded-xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
@@ -718,8 +743,13 @@ const ChatContainer = () => {
                 <button 
                   className="btn btn-error w-full justify-start" 
                   onClick={() => handleDeleteMessage('everyone')}
+                  disabled={isDeletingMessage}
                 >
-                  <Trash2 size={18} />
+                  {isDeletingMessage ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    <Trash2 size={18} />
+                  )}
                   Delete for everyone
                 </button>
               )}
@@ -727,14 +757,20 @@ const ChatContainer = () => {
               <button 
                 className="btn btn-error w-full justify-start" 
                 onClick={() => handleDeleteMessage('me')}
+                disabled={isDeletingMessage}
               >
-                <Trash2 size={18} />
+                {isDeletingMessage ? (
+                  <span className="loading loading-spinner loading-xs"></span>
+                ) : (
+                  <Trash2 size={18} />
+                )}
                 Delete for me
               </button>
               
               <button 
                 className="btn btn-ghost w-full" 
                 onClick={closeDeleteModal}
+                disabled={isDeletingMessage}
               >
                 Cancel
               </button>
