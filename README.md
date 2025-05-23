@@ -31,7 +31,7 @@ A real-time chat application built with React, Socket.IO, and Node.js. Features 
 To run the application locally:
 
 1. Clone the repository
-2. Create a `.env` file in the `backend` directory (see `.env.example` for reference)
+2. Create a `.env` file 
 3. Install dependencies:
    ```bash
    npm install
