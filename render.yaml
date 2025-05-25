@@ -23,6 +23,13 @@ services:
         sync: false
       - key: EMAIL_PASSWORD
         sync: false
+      # Cloudinary configuration - set these in the Render dashboard
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
       - key: PRODUCTION_URL
         value: https://lynqit.onrender.com
       - key: LOCAL_URL
