@@ -4,9 +4,10 @@ import { getGoogleClientId, ENV } from '../config/environment';
 const EnvironmentDebug = () => {
   const [showDebug, setShowDebug] = useState(false);
 
-  if (import.meta.env.MODE === 'production') {
-    return null; // Don't show in production unless needed
-  }
+  // Show debug in both development and production for now
+  // if (import.meta.env.MODE === 'production') {
+  //   return null; // Don't show in production unless needed
+  // }
 
   const debugInfo = {
     environment: import.meta.env.MODE,
@@ -19,6 +20,11 @@ const EnvironmentDebug = () => {
     socketUrl: ENV.socketUrl,
     isProduction: ENV.isProduction,
     isDevelopment: ENV.isDevelopment,
+    // Runtime config check
+    runtimeConfigAvailable: !!window.__APP_CONFIG__,
+    runtimeGoogleClientId: window.__APP_CONFIG__?.GOOGLE_CLIENT_ID,
+    // Build time info
+    buildTime: window.__APP_CONFIG__?.BUILD_TIME || 'Not available',
   };
 
   return (
@@ -30,7 +36,7 @@ const EnvironmentDebug = () => {
       >
         🐛
       </button>
-      
+
       {showDebug && (
         <div className="absolute bottom-12 right-0 bg-base-100 border border-base-300 rounded-lg p-4 shadow-lg max-w-md">
           <h3 className="font-bold mb-2">Environment Debug</h3>

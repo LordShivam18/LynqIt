@@ -14,7 +14,7 @@
     "dev:client": "cd frontend && npm run dev",
     "build": "npm run build-client",
     "render-postbuild": "npm run build-client",
-    "render-build": "npm install && npm run build-client",
+    "render-build": "npm install && node scripts/inject-env.js && npm run build-client",
     "render-start": "cd backend && NODE_ENV=production npm start"
   },
   "engines": {
@@ -33,4 +33,4 @@
   ],
   "author": "",
   "license": "ISC"
-} 
+}

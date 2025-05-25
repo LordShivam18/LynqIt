@@ -2,7 +2,7 @@ services:
   - type: web
     name: lynqit-chat-app
     env: node
-    buildCommand: npm run render-build
+    buildCommand: echo "Environment check:" && echo "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" && echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" && npm run render-build
     startCommand: npm run render-start
     healthCheckPath: /api/health
     envVars:
