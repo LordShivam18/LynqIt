@@ -29,6 +29,13 @@ export const getEnvironmentConfig = () => {
       googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com',
     },
 
+    // Debug info for production
+    debug: {
+      googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      nodeEnv: import.meta.env.NODE_ENV,
+      mode: import.meta.env.MODE,
+    },
+
     // Feature flags
     features: {
       enableAnalytics: isProduction,

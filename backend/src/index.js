@@ -91,7 +91,20 @@ app.use("/api/status", statusRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "OK", message: "Server is running" });
+  res.status(200).json({
+    status: "OK",
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    googleOAuth: {
+      configured: !!process.env.GOOGLE_CLIENT_ID,
+      clientIdPrefix: process.env.GOOGLE_CLIENT_ID ? process.env.GOOGLE_CLIENT_ID.substring(0, 10) + '...' : 'not set',
+      secretConfigured: !!process.env.GOOGLE_CLIENT_SECRET
+    },
+    cors: {
+      origin: getFrontendUrl()
+    }
+  });
 });
 
 // Serve static files in production
