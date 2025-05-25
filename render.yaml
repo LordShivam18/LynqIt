@@ -34,4 +34,7 @@ services:
         value: https://lynqit.onrender.com
       - key: LOCAL_URL
         value: http://localhost:5173
+      # Google OAuth configuration - set this in the Render dashboard
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
     autoDeploy: true

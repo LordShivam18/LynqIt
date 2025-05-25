@@ -20,6 +20,7 @@ import { useGroupStore } from "./store/useGroupStore";
 import { useEffect } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { initializeEncryption } from "./utils/encryption";
+import { getGoogleClientId } from "./config/environment";
 
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
@@ -92,7 +93,7 @@ const App = () => {
     );
 
   return (
-    <GoogleOAuthProvider clientId="461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={getGoogleClientId()}>
       <div data-theme={theme}>
         <Navbar />
 

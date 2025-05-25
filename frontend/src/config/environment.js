@@ -8,22 +8,27 @@ export const getEnvironmentConfig = () => {
     // Environment detection
     isDevelopment,
     isProduction,
-    
+
     // API Configuration
-    apiBaseUrl: isDevelopment 
-      ? 'http://localhost:5001/api' 
+    apiBaseUrl: isDevelopment
+      ? 'http://localhost:5001/api'
       : '/api',
-    
+
     // Frontend URLs
-    frontendUrl: isDevelopment 
-      ? 'http://localhost:5173' 
+    frontendUrl: isDevelopment
+      ? 'http://localhost:5173'
       : window.location.origin,
-    
+
     // Socket.IO Configuration
-    socketUrl: isDevelopment 
-      ? 'http://localhost:5001' 
+    socketUrl: isDevelopment
+      ? 'http://localhost:5001'
       : window.location.origin,
-    
+
+    // OAuth Configuration
+    oauth: {
+      googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com',
+    },
+
     // Feature flags
     features: {
       enableAnalytics: isProduction,
@@ -31,7 +36,7 @@ export const getEnvironmentConfig = () => {
       enableDebugMode: isDevelopment,
       enableServiceWorker: isProduction,
     },
-    
+
     // Security settings
     security: {
       enableCSP: isProduction,
@@ -39,14 +44,14 @@ export const getEnvironmentConfig = () => {
       cookieSecure: isProduction,
       sameSite: isProduction ? 'strict' : 'lax',
     },
-    
+
     // Performance settings
     performance: {
       enableCompression: isProduction,
       enableCaching: isProduction,
       enableLazyLoading: true,
     },
-    
+
     // App metadata
     app: {
       name: 'LynqIt',
@@ -66,3 +71,4 @@ export const isDevelopment = () => ENV.isDevelopment;
 export const getApiUrl = (endpoint = '') => `${ENV.apiBaseUrl}${endpoint}`;
 export const getFrontendUrl = (path = '') => `${ENV.frontendUrl}${path}`;
 export const getSocketUrl = () => ENV.socketUrl;
+export const getGoogleClientId = () => ENV.oauth.googleClientId;
