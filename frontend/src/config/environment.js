@@ -29,13 +29,6 @@ export const getEnvironmentConfig = () => {
       googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com',
     },
 
-    // Debug information (only in development)
-    debug: isDevelopment ? {
-      envMode: import.meta.env.MODE,
-      googleClientIdFromEnv: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      allEnvVars: import.meta.env,
-    } : {},
-
     // Feature flags
     features: {
       enableAnalytics: isProduction,
@@ -78,17 +71,4 @@ export const isDevelopment = () => ENV.isDevelopment;
 export const getApiUrl = (endpoint = '') => `${ENV.apiBaseUrl}${endpoint}`;
 export const getFrontendUrl = (path = '') => `${ENV.frontendUrl}${path}`;
 export const getSocketUrl = () => ENV.socketUrl;
-export const getGoogleClientId = () => {
-  const clientId = ENV.oauth.googleClientId;
-
-  // Debug logging in development
-  if (ENV.isDevelopment) {
-    console.log('🔍 Google Client ID Debug:', {
-      fromEnv: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      final: clientId,
-      envMode: import.meta.env.MODE
-    });
-  }
-
-  return clientId;
-};
+export const getGoogleClientId = () => ENV.oauth.googleClientId;

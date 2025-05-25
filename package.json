@@ -15,8 +15,7 @@
     "build": "npm run build-client",
     "render-postbuild": "npm run build-client",
     "render-build": "npm install && npm run build-client",
-    "render-start": "cd backend && NODE_ENV=production npm start",
-    "production-check": "echo 'Checking environment variables...' && echo 'VITE_GOOGLE_CLIENT_ID:' $VITE_GOOGLE_CLIENT_ID"
+    "render-start": "cd backend && NODE_ENV=production npm start"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -34,4 +33,4 @@
   ],
   "author": "",
   "license": "ISC"
-}
+} 
