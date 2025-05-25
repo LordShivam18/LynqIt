@@ -166,6 +166,35 @@ export const incrementUnreadCount = async (userId, chatType, targetId, messageId
     }
 };
 
+// Handle mention notifications
+export const handleMentionNotification = async (mentionedUserId, messageId, groupId, senderName, groupName) => {
+    try {
+        // Create mention notification record
+        const mentionNotification = new MentionNotification({
+            mentionedUserId,
+            messageId,
+            groupId,
+            senderName,
+            groupName,
+            isRead: false
+        });
+
+        await mentionNotification.save();
+
+        // Emit updated unread counts to the mentioned user
+        const userSocketId = getReceiverSocketId(mentionedUserId);
+        if (userSocketId) {
+            const unreadCounts = await getUnreadCountsForUser(mentionedUserId);
+            io.to(userSocketId).emit("unreadCountUpdate", unreadCounts);
+        }
+
+        return mentionNotification;
+    } catch (error) {
+        console.error("Error handling mention notification:", error);
+        return null;
+    }
+};
+
 // Get comprehensive unread counts for a user
 export const getUnreadCountsForUser = async (userId) => {
     try {

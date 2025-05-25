@@ -718,6 +718,14 @@ io.on("connection", async (socket) => {
             console.error("Error updating delivery status:", error);
           }
         }, 100);
+
+        // Increment unread count for receiver (real-time update)
+        try {
+          const { incrementUnreadCount } = await import('../controllers/unreadCounter.controller.js');
+          await incrementUnreadCount(receiverId, 'direct', userId, newMessage._id);
+        } catch (error) {
+          console.error("Error incrementing unread count:", error);
+        }
       }
 
       // Also emit to sender for multi-device sync
@@ -737,7 +745,7 @@ io.on("connection", async (socket) => {
     try {
       console.log("📤 Received group message via Socket.IO:", messageData);
 
-      const { text, image, mediaType, groupId, tempId } = messageData;
+      const { text, image, mediaType, groupId, tempId, mentions } = messageData;
 
       // Validate required fields
       if (!groupId) {
@@ -781,7 +789,8 @@ io.on("connection", async (socket) => {
         messageType: 'group',
         text: text || "",
         image: imageUrl,
-        mediaType
+        mediaType,
+        mentions: mentions || []
       });
 
       await newMessage.save();
@@ -798,15 +807,53 @@ io.on("connection", async (socket) => {
         tempId
       });
 
-      // Emit to all group members
+      // Send mention notifications to mentioned users
+      if (mentions && mentions.length > 0) {
+        const { handleMentionNotification } = await import('../controllers/unreadCounter.controller.js');
+
+        mentions.forEach(async (mention) => {
+          const mentionedUserSocketId = userSocketMap[mention.user];
+          if (mentionedUserSocketId) {
+            // Send real-time mention notification
+            io.to(mentionedUserSocketId).emit("userMentioned", {
+              messageId: newMessage._id,
+              groupId: group._id,
+              senderName: newMessage.senderId.fullName,
+              groupName: group.name,
+              timestamp: new Date()
+            });
+
+            // Handle mention notification in database and update unread counts
+            await handleMentionNotification(
+              mention.user,
+              newMessage._id,
+              group._id,
+              newMessage.senderId.fullName,
+              group.name
+            );
+          }
+        });
+      }
+
+      // Emit to all group members and update unread counts
       const groupMembers = group.members.map(member => member.user.toString());
-      groupMembers.forEach(memberId => {
+      groupMembers.forEach(async (memberId) => {
         const memberSocketId = userSocketMap[memberId];
         if (memberSocketId) {
           io.to(memberSocketId).emit("newGroupMessage", {
             message: newMessage,
             groupId
           });
+
+          // Increment unread count for group members (except sender)
+          if (memberId !== userId) {
+            try {
+              const { incrementUnreadCount } = await import('../controllers/unreadCounter.controller.js');
+              await incrementUnreadCount(memberId, 'group', groupId, newMessage._id);
+            } catch (error) {
+              console.error("Error incrementing group unread count:", error);
+            }
+          }
         }
       });
 
