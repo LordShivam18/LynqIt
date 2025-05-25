@@ -50,13 +50,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post("/auth/login", data);
 
-      // Check if 2FA is required
-      if (res.data.requires2FA) {
-        set({ isLoggingIn: false });
-        return { requires2FA: true, email: res.data.email };
-      }
-
-      // Regular login success
+      // Login success - 2FA is no longer enforced during login
       set({ authUser: res.data });
       toast.success("Logged in successfully");
       get().connectSocket();

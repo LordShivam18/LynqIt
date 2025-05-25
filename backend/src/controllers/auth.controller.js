@@ -121,17 +121,9 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
-        // Check if 2FA is enabled
-        if (user.twoFactorEnabled) {
-            // Don't generate token yet, require 2FA verification
-            return res.status(200).json({
-                requires2FA: true,
-                message: "Please enter your 2FA code",
-                email: user.email
-            });
-        }
-
-
+        // 2FA is available but not enforced during login
+        // Users can enable/disable 2FA in settings but it won't block login
+        // This allows for better user experience while keeping 2FA as an optional security feature
 
         generateToken(user._id, res);
 

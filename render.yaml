@@ -36,5 +36,9 @@ services:
         value: http://localhost:5173
       # Google OAuth configuration - set this in the Render dashboard
       - key: VITE_GOOGLE_CLIENT_ID
+        value: 461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_ID
+        value: 461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
     autoDeploy: true
