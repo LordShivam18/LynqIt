@@ -114,30 +114,6 @@ LynqIt-Chat-App/
 └── package.json               # Root package.json
 ```
 
-## 🚀 Quick Start
-
-### **Prerequisites**
-- Node.js 18+
-- MongoDB database
-- Gmail account (for email verification)
-- Cloudinary account (for media storage)
-
-### **Production Deployment**
-
-1. **Build the application**
-   ```bash
-   npm run build
-   ```
-
-2. **Start production server**
-   ```bash
-   npm start
-   ```
-
-3. **Using deployment script**
-   ```bash
-   npm run deploy
-   ```
 
 ## 📧 Email Configuration
 
