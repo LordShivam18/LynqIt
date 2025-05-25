@@ -257,6 +257,38 @@ const MessageInput = () => {
     }
   };
 
+  // Extract mentions from text
+  const extractMentions = (messageText) => {
+    if (!isGroupChat || !selectedGroup?.members) return [];
+
+    const mentions = [];
+    const mentionRegex = /@(\w+)/g;
+    let match;
+
+    while ((match = mentionRegex.exec(messageText)) !== null) {
+      const username = match[1];
+      const offset = match.index;
+      const length = match[0].length;
+
+      // Find the user in group members
+      const member = selectedGroup.members.find(m =>
+        m.user.username === username ||
+        m.user.fullName.toLowerCase().replace(/\s+/g, '') === username.toLowerCase()
+      );
+
+      if (member) {
+        mentions.push({
+          user: member.user._id,
+          username: member.user.username,
+          offset,
+          length
+        });
+      }
+    }
+
+    return mentions;
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview && !gifUrl) return;
@@ -270,11 +302,16 @@ const MessageInput = () => {
       // messageText remains unchanged (plain text)
       isEncrypted = false;
 
+      // Extract mentions for group messages
+      const mentions = isGroupChat ? extractMentions(messageText) : [];
+      console.log('🏷️ Extracted mentions:', mentions);
+
       const messageData = {
         text: messageText,
         image: gifUrl || (imagePreview ? imagePreview.url : null),
         mediaType: imagePreview ? imagePreview.type : (gifUrl ? 'gif' : null),
-        isEncrypted: isEncrypted
+        isEncrypted: isEncrypted,
+        mentions: mentions
       };
 
       // Handle reply vs regular message

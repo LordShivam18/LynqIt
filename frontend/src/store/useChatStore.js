@@ -764,13 +764,13 @@ export const useChatStore = create((set, get) => ({
           }, 1000);
         }
       }
-      // If we're the receiver but not on this chat, increment unread count
+      // If we're the receiver but not on this chat, the backend will handle unread count increment
+      // and emit unreadCountUpdate event which we listen to below
       else if (message.receiverId === currentUserId) {
-        console.log("📬 Received new chat from different user, incrementing unread count");
-        get().incrementUnreadCount(messageSenderId);
+        console.log("📬 Received new message from different user - unread count will be updated via Socket.IO");
       }
 
-      // Automatically refresh the users list to update sidebar
+      // Refresh the users list to update sidebar with latest message info
       get().getUsers();
     });
 
@@ -853,25 +853,38 @@ export const useChatStore = create((set, get) => ({
 
     // Listen for unread count updates
     socket.on("unreadCountUpdate", (unreadCounts) => {
+      console.log("📊 Received real-time unread count update:", unreadCounts);
       set({ unreadCounts });
+
+      // Force refresh users list to update sidebar with new unread counts
+      setTimeout(() => {
+        get().getUsers();
+      }, 100);
     });
 
     // Listen for mention notifications
-    socket.on("userMentioned", ({ messageId, groupId, senderName, timestamp }) => {
-      // Update mention counts
+    socket.on("userMentioned", ({ messageId, groupId, senderName, groupName, timestamp }) => {
+      console.log("🏷️ Received mention notification:", { messageId, groupId, senderName, groupName });
+
+      // Update mention counts (this will be overridden by unreadCountUpdate event from backend)
       set(state => ({
         unreadCounts: {
           ...state.unreadCounts,
           mentions: {
             ...state.unreadCounts.mentions,
-            [groupId]: (state.unreadCounts.mentions[groupId] || 0) + 1
+            [groupId]: (state.unreadCounts.mentions?.[groupId] || 0) + 1
           },
-          totalMentions: state.unreadCounts.totalMentions + 1
+          totalMentions: (state.unreadCounts.totalMentions || 0) + 1
         }
       }));
 
       // Show notification
-      toast.info(`${senderName} mentioned you in a group`);
+      toast.info(`${senderName} mentioned you in ${groupName || 'a group'}`);
+
+      // Force refresh groups list to update sidebar
+      setTimeout(() => {
+        get().getUsers();
+      }, 100);
     });
 
     // Listen for new status updates
@@ -963,10 +976,9 @@ export const useChatStore = create((set, get) => ({
     const heartbeatInterval = setInterval(() => {
       get().updateLastSeen();
 
-      // Also periodically request user statuses and unread counts
+      // Also periodically request user statuses (unread counts are handled via real-time events)
       if (socket.connected) {
         socket.emit("getUserStatuses");
-        socket.emit("updateUnreadCounts");
       }
     }, 60000); // Every 60 seconds (reduced from 15 seconds)
 

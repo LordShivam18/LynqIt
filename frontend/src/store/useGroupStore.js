@@ -93,7 +93,7 @@ export const useGroupStore = create((set, get) => ({
         text: messageData.text || "",
         image: messageData.image,
         mediaType: messageData.mediaType,
-        mentions: [],
+        mentions: messageData.mentions || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'sending',
@@ -263,10 +263,7 @@ export const useGroupStore = create((set, get) => ({
     }
 
     // Reset unread counts and mark mentions as read for this group
-    const socket = useAuthStore.getState().socket;
-    if (socket) {
-      socket.emit("updateUnreadCounts");
-    }
+    // The backend will handle unread count updates via Socket.IO events
 
     // Mark group chat as read using WhatsApp-style system
     try {
@@ -373,20 +370,15 @@ export const useGroupStore = create((set, get) => ({
           }, 1000);
         }
       } else {
-        // If we're not viewing this group and we're not the sender, increment unread count
+        // If we're not viewing this group and we're not the sender,
+        // the backend will handle unread count increment and emit unreadCountUpdate event
         if (message.senderId !== currentUserId) {
           // Check if we're mentioned in the message
           const isMentioned = message.mentions && message.mentions.some(mention => mention.user === currentUserId);
 
-          // Emit socket event to update unread counts
-          const socket = useAuthStore.getState().socket;
-          if (socket) {
-            socket.emit("updateUnreadCounts");
-
-            if (isMentioned) {
-              // Show mention notification
-              toast.info(`You were mentioned in ${get().groups.find(g => g._id === groupId)?.name || 'a group'}`);
-            }
+          if (isMentioned) {
+            // Show mention notification
+            toast.info(`You were mentioned in ${get().groups.find(g => g._id === groupId)?.name || 'a group'}`);
           }
         }
       }
@@ -777,6 +769,39 @@ export const useGroupStore = create((set, get) => ({
     }
   },
 
+  // Extract mentions from text for replies
+  extractMentionsFromText: (messageText) => {
+    const { selectedGroup } = get();
+    if (!selectedGroup?.members) return [];
+
+    const mentions = [];
+    const mentionRegex = /@(\w+)/g;
+    let match;
+
+    while ((match = mentionRegex.exec(messageText)) !== null) {
+      const username = match[1];
+      const offset = match.index;
+      const length = match[0].length;
+
+      // Find the user in group members
+      const member = selectedGroup.members.find(m =>
+        m.user.username === username ||
+        m.user.fullName.toLowerCase().replace(/\s+/g, '') === username.toLowerCase()
+      );
+
+      if (member) {
+        mentions.push({
+          user: member.user._id,
+          username: member.user.username,
+          offset,
+          length
+        });
+      }
+    }
+
+    return mentions;
+  },
+
   // Reply to a group message
   replyToGroupMessage: async (messageId, replyText, image = null, mediaType = null) => {
     const { selectedGroup, groupMessages } = get();
@@ -784,6 +809,9 @@ export const useGroupStore = create((set, get) => ({
     try {
       // Get the original message from current messages
       const replyingTo = groupMessages.find(msg => msg._id === messageId);
+
+      // Extract mentions from reply text
+      const mentions = get().extractMentionsFromText(replyText || "");
 
       // Optimistically update UI with pending reply message
       const tempId = `temp-group-reply-${Date.now()}`;
@@ -802,7 +830,7 @@ export const useGroupStore = create((set, get) => ({
         mediaType: mediaType,
         replyTo: replyingTo, // Use the full replyingTo object
         isReply: true,
-        mentions: [],
+        mentions: mentions,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'sending',
@@ -817,7 +845,8 @@ export const useGroupStore = create((set, get) => ({
         text: replyText,
         image,
         mediaType,
-        groupId: selectedGroup._id
+        groupId: selectedGroup._id,
+        mentions: mentions
       };
 
       const res = await axiosInstance.post(`/messages/reply/${messageId}`, messageData);
