@@ -2,11 +2,14 @@
 
 // Helper function to get Google Client ID with multiple fallbacks
 const getGoogleClientIdWithFallbacks = () => {
+  // PRODUCTION HARDCODED FIX - Always use the correct Google Client ID
+  const PRODUCTION_GOOGLE_CLIENT_ID = '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com';
+
   // Try multiple sources in order of preference
   const sources = [
     import.meta.env.VITE_GOOGLE_CLIENT_ID,
     window.__APP_CONFIG__?.GOOGLE_CLIENT_ID,
-    '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com' // Hardcoded fallback
+    PRODUCTION_GOOGLE_CLIENT_ID // Always fallback to the correct ID
   ];
 
   for (const source of sources) {
@@ -17,8 +20,9 @@ const getGoogleClientIdWithFallbacks = () => {
     }
   }
 
-  console.error('❌ No valid Google Client ID found in any source');
-  return null;
+  // Force return the production client ID if all else fails
+  console.log('🔑 Force using production Google Client ID');
+  return PRODUCTION_GOOGLE_CLIENT_ID;
 };
 
 export const getEnvironmentConfig = () => {
