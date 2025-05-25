@@ -4,10 +4,9 @@ import { getGoogleClientId, ENV } from '../config/environment';
 const EnvironmentDebug = () => {
   const [showDebug, setShowDebug] = useState(false);
 
-  // Show debug in both development and production for now
-  // if (import.meta.env.MODE === 'production') {
-  //   return null; // Don't show in production unless needed
-  // }
+  if (import.meta.env.MODE === 'production') {
+    return null; // Don't show in production unless needed
+  }
 
   const debugInfo = {
     environment: import.meta.env.MODE,
@@ -31,7 +30,7 @@ const EnvironmentDebug = () => {
       >
         🐛
       </button>
-
+      
       {showDebug && (
         <div className="absolute bottom-12 right-0 bg-base-100 border border-base-300 rounded-lg p-4 shadow-lg max-w-md">
           <h3 className="font-bold mb-2">Environment Debug</h3>

@@ -22,7 +22,6 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { initializeEncryption } from "./utils/encryption";
 import { getGoogleClientId } from "./config/environment";
 import EnvironmentDebug from "./components/EnvironmentDebug";
-import { logHealthStatus } from "./utils/healthCheck";
 
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
@@ -37,9 +36,6 @@ const App = () => {
 
   useEffect(() => {
     checkAuth();
-
-    // Check backend health and Google OAuth configuration
-    logHealthStatus();
   }, [checkAuth]);
 
   // Initialize encryption when user is authenticated
@@ -96,18 +92,8 @@ const App = () => {
     clientId: googleClientId,
     environment: import.meta.env.MODE,
     viteGoogleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-    currentOrigin: window.location.origin,
-    allEnvVars: import.meta.env
+    currentOrigin: window.location.origin
   });
-
-  // Validate Google Client ID
-  if (!googleClientId || googleClientId === 'your-google-oauth-client-id-here') {
-    console.error('❌ Google OAuth Client ID is not properly configured!');
-    console.error('Expected: 461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com');
-    console.error('Received:', googleClientId);
-  } else {
-    console.log('✅ Google OAuth Client ID is properly configured');
-  }
 
   if (isCheckingAuth && !authUser)
     return (
@@ -116,44 +102,32 @@ const App = () => {
       </div>
     );
 
-  // Render with or without Google OAuth based on client ID availability
-  const renderApp = () => (
-    <div data-theme={theme}>
-      <Navbar />
+  return (
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <div data-theme={theme}>
+        <Navbar />
 
-      <Routes>
-        <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
-        <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
-        <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
-        <Route path="/verify-otp" element={!authUser ? <OTPVerificationPage /> : <Navigate to="/" />} />
-        <Route path="/forgot-password" element={!authUser ? <ForgotPasswordPage /> : <Navigate to="/" />} />
-        <Route path="/reset-password" element={!authUser ? <ResetPasswordPage /> : <Navigate to="/" />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/security" element={authUser ? <SecuritySettings /> : <Navigate to="/login" />} />
-        <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
-        <Route path="/join-group/:groupId" element={
-          <ErrorBoundary>
-            <JoinGroupPage />
-          </ErrorBoundary>
-        } />
-      </Routes>
+        <Routes>
+          <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
+          <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
+          <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
+          <Route path="/verify-otp" element={!authUser ? <OTPVerificationPage /> : <Navigate to="/" />} />
+          <Route path="/forgot-password" element={!authUser ? <ForgotPasswordPage /> : <Navigate to="/" />} />
+          <Route path="/reset-password" element={!authUser ? <ResetPasswordPage /> : <Navigate to="/" />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/security" element={authUser ? <SecuritySettings /> : <Navigate to="/login" />} />
+          <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
+          <Route path="/join-group/:groupId" element={
+            <ErrorBoundary>
+              <JoinGroupPage />
+            </ErrorBoundary>
+          } />
+        </Routes>
 
-      <Toaster />
-      <EnvironmentDebug />
-    </div>
+        <Toaster />
+        <EnvironmentDebug />
+      </div>
+    </GoogleOAuthProvider>
   );
-
-  // Return app with Google OAuth provider if client ID is available
-  if (googleClientId && googleClientId !== 'your-google-oauth-client-id-here') {
-    return (
-      <GoogleOAuthProvider clientId={googleClientId}>
-        {renderApp()}
-      </GoogleOAuthProvider>
-    );
-  }
-
-  // Return app without Google OAuth if client ID is not available
-  console.warn('⚠️ Google OAuth disabled - Client ID not configured properly');
-  return renderApp();
 };
 export default App;
