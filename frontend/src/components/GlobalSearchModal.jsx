@@ -22,7 +22,7 @@ const GlobalSearchModal = ({ isOpen, onClose }) => {
 
   // Focus search input when modal opens and load all users
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && authUser) {
       if (searchInputRef.current) {
         searchInputRef.current.focus();
       }
@@ -32,10 +32,17 @@ const GlobalSearchModal = ({ isOpen, onClose }) => {
         getAllUsers();
       }
     }
-  }, [isOpen]);
+  }, [isOpen, authUser]);
 
-  // Perform search when query changes
+  // Perform search when query changes - Only for authenticated users
   useEffect(() => {
+    // Don't perform search if user is not authenticated
+    if (!authUser) {
+      setSearchResults({ messages: [], users: [], groups: [] });
+      setIsSearching(false);
+      return;
+    }
+
     if (!searchQuery.trim()) {
       setSearchResults({ messages: [], users: [], groups: [] });
       setIsSearching(false);
@@ -54,12 +61,17 @@ const GlobalSearchModal = ({ isOpen, onClose }) => {
     }, 300);
 
     return () => clearTimeout(searchTimeout);
-  }, [searchQuery, messages, users, allUsers, groups, groupMessages]);
+  }, [searchQuery, messages, users, allUsers, groups, groupMessages, authUser]);
 
   const performSearch = (query) => {
+    // Don't perform search if user is not authenticated
+    if (!authUser) {
+      setSearchResults({ messages: [], users: [], groups: [] });
+      setIsSearching(false);
+      return;
+    }
+
     const lowerQuery = query.toLowerCase();
-
-
 
     // Search users - use allUsers for comprehensive search, fallback to users
     const usersToSearch = allUsers && allUsers.length > 0 ? allUsers : users;
@@ -148,7 +160,8 @@ const GlobalSearchModal = ({ isOpen, onClose }) => {
     return searchResults.messages.length + searchResults.users.length + searchResults.groups.length;
   };
 
-  if (!isOpen) return null;
+  // Don't render if modal is not open or user is not authenticated
+  if (!isOpen || !authUser) return null;
 
   const filteredResults = getFilteredResults();
 

@@ -84,6 +84,8 @@ const App = () => {
   }, [autoThemeEnabled, checkAutoTheme]);
 
   console.log({ authUser });
+  console.log('Google Client ID:', getGoogleClientId());
+  console.log('Environment Config:', ENV);
 
   if (isCheckingAuth && !authUser)
     return (

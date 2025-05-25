@@ -24,12 +24,15 @@ const Navbar = () => {
     return () => clearInterval(timer);
   }, [autoThemeEnabled, checkAutoTheme]);
 
-  // Keyboard shortcut for global search
+  // Keyboard shortcut for global search - Only for authenticated users
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setShowGlobalSearch(true);
+        // Only allow global search for authenticated users
+        if (authUser) {
+          setShowGlobalSearch(true);
+        }
       }
       if (e.key === 'Escape') {
         setShowGlobalSearch(false);
@@ -38,7 +41,7 @@ const Navbar = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [authUser]);
 
   // Cycle through theme modes: auto → light → dark → auto
   const cycleThemeMode = () => {
@@ -95,14 +98,16 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Global Search button */}
-            <button
-              onClick={() => setShowGlobalSearch(true)}
-              className="btn btn-sm btn-ghost tooltip tooltip-bottom"
-              data-tip="Global Search (Ctrl+K)"
-            >
-              <Search className="w-4 h-4" />
-            </button>
+            {/* Global Search button - Only show for authenticated users */}
+            {authUser && (
+              <button
+                onClick={() => setShowGlobalSearch(true)}
+                className="btn btn-sm btn-ghost tooltip tooltip-bottom"
+                data-tip="Global Search (Ctrl+K)"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Theme toggle button */}
             <button
@@ -136,11 +141,13 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Global Search Modal */}
-      <GlobalSearchModal
-        isOpen={showGlobalSearch}
-        onClose={() => setShowGlobalSearch(false)}
-      />
+      {/* Global Search Modal - Only render for authenticated users */}
+      {authUser && (
+        <GlobalSearchModal
+          isOpen={showGlobalSearch}
+          onClose={() => setShowGlobalSearch(false)}
+        />
+      )}
     </header>
   );
 };
