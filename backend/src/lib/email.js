@@ -460,3 +460,42 @@ export const sendPasswordResetConfirmationEmail = async (to, name) => {
         throw error;
     }
 };
+
+/**
+ * Send a general email (for reports, notifications, etc.)
+ * @param {string} to - Recipient email
+ * @param {string} subject - Email subject
+ * @param {string} htmlContent - HTML content of the email
+ * @returns {Promise<Object>} Nodemailer send mail response
+ */
+export const sendEmail = async (to, subject, htmlContent) => {
+    try {
+        // Check if transporter is properly configured
+        if (!transporter) {
+            console.error('Email transporter not configured properly');
+            throw new Error('Email service configuration error');
+        }
+
+        console.log(`Attempting to send email to: ${to}`);
+
+        const mailOptions = {
+            from: `"LynqIt" <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            html: htmlContent
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully to:', to);
+        console.log('Message ID:', info.messageId);
+
+        return info;
+    } catch (error) {
+        console.error('Error sending email:', error);
+        console.error('Error details:', error.message);
+        if (error.code) {
+            console.error('Error code:', error.code);
+        }
+        throw error;
+    }
+};

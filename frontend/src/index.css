@@ -38,6 +38,29 @@
   50% { opacity: 0.8; }
 }
 
+/* Disable resize handles */
+* {
+  resize: none !important;
+}
+
+/* Ensure no resize handles on containers */
+.container, .flex, .grid, aside, main, section, div {
+  resize: none !important;
+}
+
+/* Enhanced sidebar styling */
+.sidebar-item {
+  @apply transition-all duration-200 hover:shadow-sm;
+}
+
+.sidebar-item:hover {
+  transform: translateY(-1px);
+}
+
+
+
+
+
 /* Enhance focus effects */
 @keyframes circuit-pulse {
   0% { opacity: 0.1; }

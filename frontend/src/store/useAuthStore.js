@@ -49,12 +49,21 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
+
+      // Check if 2FA is required
+      if (res.data.requires2FA) {
+        set({ isLoggingIn: false });
+        return { requires2FA: true, email: res.data.email };
+      }
+
+      // Regular login success
       set({ authUser: res.data });
       toast.success("Logged in successfully");
-
       get().connectSocket();
+      return { success: true };
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
+      return { error: true };
     } finally {
       set({ isLoggingIn: false });
     }
@@ -64,27 +73,27 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/google", { credential });
-      
+
       // Check if we need to collect a username
       if (res.data.needsUsername) {
-        set({ 
+        set({
           googleAuthInfo: {
             credential,
             ...res.data.googleInfo
           },
-          isLoggingIn: false 
+          isLoggingIn: false
         });
         toast.success("Please create a username to complete your account");
         return { needsUsername: true };
       }
-      
+
       // Regular login success
-      set({ 
+      set({
         authUser: res.data,
         googleAuthInfo: null // Clear any existing google auth info
       });
       toast.success("Logged in with Google successfully");
-      
+
       get().connectSocket();
       return { success: true };
     } catch (error) {
@@ -96,28 +105,28 @@ export const useAuthStore = create((set, get) => ({
       }
     }
   },
-  
+
   completeGoogleSignup: async (username) => {
     const { googleAuthInfo } = get();
-    
+
     if (!googleAuthInfo || !googleAuthInfo.credential) {
       toast.error("Google authentication information is missing");
       return false;
     }
-    
+
     set({ isSigningUp: true });
-    
+
     try {
-      const res = await axiosInstance.post("/auth/google", { 
+      const res = await axiosInstance.post("/auth/google", {
         credential: googleAuthInfo.credential,
-        username 
+        username
       });
-      
-      set({ 
+
+      set({
         authUser: res.data,
         googleAuthInfo: null  // Clear google auth info after successful signup
       });
-      
+
       toast.success("Account created successfully");
       get().connectSocket();
       return true;
@@ -129,10 +138,18 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Generate token after 2FA verification
+  generateToken: (userId) => {
+    // This is called after successful 2FA verification
+    // The backend has already set the JWT cookie
+    // We just need to check auth to get the user data
+    get().checkAuth();
+  },
+
   logout: async () => {
     try {
       await axiosInstance.post("/auth/logout");
-      set({ 
+      set({
         authUser: null,
         googleAuthInfo: null // Also clear google auth info on logout
       });
@@ -146,15 +163,15 @@ export const useAuthStore = create((set, get) => ({
   updateProfile: async (userData) => {
     try {
       set({ isUpdatingProfile: true });
-      
+
       const res = await axiosInstance.put("/auth/update-profile", userData);
-      
+
       // Update authUser with the returned user data
-      set({ 
+      set({
         authUser: res.data,
         isUpdatingProfile: false
       });
-      
+
       toast.success("Profile updated!");
       return true;
     } catch (error) {
@@ -167,54 +184,65 @@ export const useAuthStore = create((set, get) => ({
   connectSocket: () => {
     const { authUser } = get();
     if (!authUser) return;
-    
+
     // Clear any existing reconnect timer
     if (get().socketReconnectTimer) {
       clearTimeout(get().socketReconnectTimer);
       set({ socketReconnectTimer: null });
     }
-    
+
     // If there's an existing connected socket, don't create a new one
     if (get().socket?.connected) return;
-    
+
     // Disconnect any existing socket
     if (get().socket) {
       get().socket.disconnect();
     }
 
-    // Create new socket with auto reconnect options
+    // Create new socket with optimized real-time settings
     const socket = io(BASE_URL, {
       query: {
         userId: authUser._id,
       },
+      // Optimized reconnection settings
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
+      reconnectionAttempts: 15,        // More attempts
+      reconnectionDelay: 500,          // Faster initial reconnect
+      reconnectionDelayMax: 3000,      // Lower max delay
+      timeout: 10000,                  // Faster timeout
+      forceNew: false,                 // Reuse existing connection
+
+      // Transport optimization
+      transports: ['websocket', 'polling'], // Prefer websocket
+      upgrade: true,                   // Allow transport upgrades
+      rememberUpgrade: true,           // Remember successful upgrades
+
+      // Performance settings
+      autoConnect: true,               // Auto connect on creation
+      multiplex: true,                 // Allow multiplexing
     });
-    
+
     set({ socket: socket });
 
     // Connect handlers
     socket.on("connect", () => {
-      console.log("Socket connected successfully");
+      console.log("✅ Socket connected successfully, ID:", socket.id);
       // Reset reconnect attempts on successful connection
       set({ socketReconnectAttempts: 0 });
-      
+
       // Get initial online users and request statuses
       socket.emit("getOnlineUsers");
       socket.emit("getUserStatuses");
     });
-    
+
     socket.on("connect_error", (error) => {
       console.error("Socket connection error:", error);
       get().handleSocketReconnect();
     });
-    
+
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
-      
+
       // If the disconnection wasn't intentional, try to reconnect
       if (reason !== "io client disconnect") {
         get().handleSocketReconnect();
@@ -225,47 +253,47 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
-    
+
     // Connect the socket
     socket.connect();
   },
-  
+
   handleSocketReconnect: () => {
     const currentAttempts = get().socketReconnectAttempts;
-    
+
     // If we've tried too many times, stop trying
     if (currentAttempts >= 10) {
       console.error("Maximum socket reconnection attempts reached");
       return;
     }
-    
+
     // Clear any existing timer
     if (get().socketReconnectTimer) {
       clearTimeout(get().socketReconnectTimer);
     }
-    
+
     // Increase backoff time with each attempt (1s, 2s, 4s, etc.)
     const delay = Math.min(1000 * Math.pow(2, currentAttempts), 30000);
-    
+
     // Set up new reconnect timer
     const timer = setTimeout(() => {
       console.log(`Attempting to reconnect socket (attempt ${currentAttempts + 1})`);
       get().connectSocket();
     }, delay);
-    
-    set({ 
+
+    set({
       socketReconnectAttempts: currentAttempts + 1,
       socketReconnectTimer: timer
     });
   },
-  
+
   disconnectSocket: () => {
     // Clear any reconnect timer
     if (get().socketReconnectTimer) {
       clearTimeout(get().socketReconnectTimer);
       set({ socketReconnectTimer: null });
     }
-    
+
     // Disconnect socket
     if (get().socket) {
       get().socket.disconnect();

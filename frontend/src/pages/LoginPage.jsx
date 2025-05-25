@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import GoogleUsernamePrompt from "../components/GoogleUsernamePrompt";
+import TwoFAVerificationModal from "../components/TwoFAVerificationModal";
 import toast from "react-hot-toast";
 
 const LoginPage = () => {
@@ -13,6 +14,9 @@ const LoginPage = () => {
     email: "",
     password: "",
   });
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+
   const navigate = useNavigate();
   const { login, isLoggingIn, loginWithGoogle, googleAuthInfo } = useAuthStore();
 
@@ -28,7 +32,26 @@ const LoginPage = () => {
       return;
     }
 
-    login(formData);
+    try {
+      const result = await login(formData);
+
+      // Check if 2FA is required
+      if (result && result.requires2FA) {
+        setPendingEmail(formData.email);
+        setShow2FAModal(true);
+      } else if (result && result.success) {
+        navigate('/');
+      }
+    } catch (error) {
+      // Error is handled in the auth store
+    }
+  };
+
+  // Handle successful 2FA verification
+  const handle2FASuccess = (user) => {
+    setShow2FAModal(false);
+    setPendingEmail("");
+    navigate('/');
   };
 
   const handleGoogleLogin = async (credentialResponse) => {
@@ -167,6 +190,17 @@ const LoginPage = () => {
       {googleAuthInfo && (
         <GoogleUsernamePrompt onComplete={() => navigate('/')} />
       )}
+
+      {/* 2FA Verification Modal */}
+      <TwoFAVerificationModal
+        isOpen={show2FAModal}
+        onClose={() => {
+          setShow2FAModal(false);
+          setPendingEmail("");
+        }}
+        email={pendingEmail}
+        onSuccess={handle2FASuccess}
+      />
     </div>
   );
 };

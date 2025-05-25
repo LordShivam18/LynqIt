@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import helmet from "helmet";
 import fs from "fs";
 
 import path from "path";
@@ -11,7 +12,18 @@ import { connectDB } from "./lib/db.js";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import groupRoutes from "./routes/group.route.js";
+import twofaRoutes from "./routes/twofa.route.js";
+import userRoutes from "./routes/user.route.js";
+import statusRoutes from "./routes/status.route.js";
 import { app, server } from "./lib/socket.js";
+
+// Security middleware
+import {
+  securityHeaders,
+  sanitizeInput,
+  generateCSRFToken
+} from "./middleware/security.middleware.js";
 
 dotenv.config();
 
@@ -19,9 +31,19 @@ const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middleware
-app.use(express.json());
+// Basic middleware (must come before security middleware that uses cookies)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // We'll handle this manually
+  crossOriginEmbedderPolicy: false
+}));
+app.use(securityHeaders);
+app.use(sanitizeInput);
+app.use(generateCSRFToken);
 
 // Function to get the appropriate frontend URL based on environment
 const getFrontendUrl = () => {
@@ -53,9 +75,19 @@ if (process.env.NODE_ENV === "production") {
   console.log(`CORS configured for development with origin: ${getFrontendUrl()}`);
 }
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
+
 // API routes - important to define these before the static file middleware
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/groups", groupRoutes);
+app.use("/api/2fa", twofaRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/status", statusRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

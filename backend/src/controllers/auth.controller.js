@@ -91,6 +91,7 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
+
     try {
         if (!email || !password) {
             return res.status(400).json({ message: "All fields are required" });
@@ -113,10 +114,24 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
+
+
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
         if (!isPasswordCorrect) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
+
+        // Check if 2FA is enabled
+        if (user.twoFactorEnabled) {
+            // Don't generate token yet, require 2FA verification
+            return res.status(200).json({
+                requires2FA: true,
+                message: "Please enter your 2FA code",
+                email: user.email
+            });
+        }
+
+
 
         generateToken(user._id, res);
 
@@ -657,5 +672,61 @@ export const resetPassword = async (req, res) => {
     } catch (error) {
         console.error("Error in resetPassword controller:", error);
         res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Save user's public key for encryption
+export const savePublicKey = async (req, res) => {
+    try {
+        const { userId, publicKey } = req.body;
+        const currentUserId = req.user._id;
+
+        // Ensure user can only save their own public key
+        if (userId !== currentUserId.toString()) {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        if (!publicKey) {
+            return res.status(400).json({ message: "Public key is required" });
+        }
+
+        // Update user's public key
+        await User.findByIdAndUpdate(currentUserId, {
+            publicKey: publicKey
+        });
+
+        console.log(`✅ Public key saved for user: ${currentUserId}`);
+        res.status(200).json({ message: "Public key saved successfully" });
+    } catch (error) {
+        console.log("Error in savePublicKey controller", error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Get user's public key for encryption
+export const getPublicKey = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required" });
+        }
+
+        const user = await User.findById(userId).select('publicKey');
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!user.publicKey) {
+            return res.status(404).json({ message: "Public key not found for this user" });
+        }
+
+        res.status(200).json({
+            publicKey: user.publicKey
+        });
+    } catch (error) {
+        console.log("Error in getPublicKey controller", error.message);
+        res.status(500).json({ message: "Internal server error" });
     }
 };

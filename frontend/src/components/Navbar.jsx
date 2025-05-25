@@ -1,14 +1,16 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
-import { LogOut, MessageSquare, Settings, User, Sun, Moon, Clock } from "lucide-react";
+import { LogOut, MessageSquare, Settings, Sun, Moon, Clock, Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import GlobalSearchModal from "./GlobalSearchModal";
 
 const Navbar = () => {
   const { logout, authUser } = useAuthStore();
   const { theme, autoThemeEnabled, toggleAutoTheme, setTheme, checkAutoTheme } = useThemeStore();
   const [currentTime, setCurrentTime] = useState(new Date());
-  
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+
   // Update current time every minute
   useEffect(() => {
     const timer = setInterval(() => {
@@ -18,10 +20,26 @@ const Navbar = () => {
         checkAutoTheme();
       }
     }, 60000);
-    
+
     return () => clearInterval(timer);
   }, [autoThemeEnabled, checkAutoTheme]);
-  
+
+  // Keyboard shortcut for global search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowGlobalSearch(true);
+      }
+      if (e.key === 'Escape') {
+        setShowGlobalSearch(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Cycle through theme modes: auto → light → dark → auto
   const cycleThemeMode = () => {
     if (autoThemeEnabled) {
@@ -37,7 +55,7 @@ const Navbar = () => {
       checkAutoTheme(); // Set the correct theme based on time
     }
   };
-  
+
   // Determine the icon to show based on current theme and auto mode
   const getThemeIcon = () => {
     if (autoThemeEnabled) {
@@ -62,7 +80,7 @@ const Navbar = () => {
 
   return (
     <header
-      className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-40 
+      className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-40
     backdrop-blur-lg bg-base-100/80"
     >
       <div className="container mx-auto px-4 h-16">
@@ -77,6 +95,15 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Global Search button */}
+            <button
+              onClick={() => setShowGlobalSearch(true)}
+              className="btn btn-sm btn-ghost tooltip tooltip-bottom"
+              data-tip="Global Search (Ctrl+K)"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             {/* Theme toggle button */}
             <button
               onClick={cycleThemeMode}
@@ -85,34 +112,35 @@ const Navbar = () => {
             >
               {getThemeIcon()}
             </button>
-            
+
             <Link
               to={"/settings"}
               className={`
               btn btn-sm gap-2 transition-colors
-              
+
               `}
             >
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Settings</span>
             </Link>
 
-            {authUser && (
-              <>
-                <Link to={"/profile"} className={`btn btn-sm gap-2`}>
-                  <User className="size-5" />
-                  <span className="hidden sm:inline">Profile</span>
-                </Link>
 
-                <button className="flex gap-2 items-center" onClick={logout}>
-                  <LogOut className="size-5" />
-                  <span className="hidden sm:inline">Logout</span>
-                </button>
-              </>
+
+            {authUser && (
+              <button className="flex gap-2 items-center" onClick={logout}>
+                <LogOut className="size-5" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* Global Search Modal */}
+      <GlobalSearchModal
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+      />
     </header>
   );
 };

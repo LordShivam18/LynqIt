@@ -1,28 +1,95 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useChatStore } from "../store/useChatStore";
+import { useGroupStore } from "../store/useGroupStore";
+import { useStatusStore } from "../store/useStatusStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Search } from "lucide-react";
+import GroupCreateModal from "./GroupCreateModal";
+import StatusCreateModal from "./StatusCreateModal";
+import StatusViewer from "./StatusViewer";
+import PinButton from "./PinButton";
+import { Search, Plus, MessageCircle, Circle, Camera } from "lucide-react";
 
 const Sidebar = () => {
-  const { 
-    getUsers, 
-    getAllUsers, 
-    users, 
-    allUsers, 
-    selectedUser, 
-    setSelectedUser, 
+  const {
+    getUsers,
+    getAllUsers,
+    users,
+    allUsers,
+    selectedUser,
+    setSelectedUser,
     isUsersLoading,
-    unreadCounts 
+    unreadCounts
   } = useChatStore();
+
+  const {
+    groups,
+    selectedGroup,
+    setSelectedGroup,
+    getGroups,
+    isGroupsLoading,
+    subscribeToGroupEvents,
+    unsubscribeFromGroupEvents,
+    navigateToFirstMention
+  } = useGroupStore();
+
   const { onlineUsers, authUser, socket } = useAuthStore();
+
+  const {
+    myStatuses,
+    contactStatuses,
+    getMyStatuses,
+    getContactStatuses,
+    getUnviewedStatusCount,
+    handleNewStatus,
+    handleStatusReaction,
+    handleStatusMessage
+  } = useStatusStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState("chats"); // "chats", "status", or "groups"
+  const [showGroupCreateModal, setShowGroupCreateModal] = useState(false);
+  const [showStatusCreateModal, setShowStatusCreateModal] = useState(false);
+  const [showStatusViewer, setShowStatusViewer] = useState(false);
+  const [statusViewerData, setStatusViewerData] = useState({ contactIndex: 0, statusIndex: 0 });
 
   useEffect(() => {
     getUsers(); // Get users with existing conversations
-  }, [getUsers]);
+    getGroups(); // Get user's groups
+    getMyStatuses(); // Get my statuses
+    getContactStatuses(); // Get contact statuses
+  }, [getUsers, getGroups, getMyStatuses, getContactStatuses]);
+
+  // Socket.IO listeners for real-time status updates
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for new status updates
+    socket.on("newStatus", handleNewStatus);
+
+    // Listen for status reactions
+    socket.on("statusReaction", handleStatusReaction);
+
+    // Listen for status messages
+    socket.on("statusMessage", handleStatusMessage);
+
+    return () => {
+      socket.off("newStatus");
+      socket.off("statusReaction");
+      socket.off("statusMessage");
+    };
+  }, [socket, handleNewStatus, handleStatusReaction, handleStatusMessage]);
+
+  useEffect(() => {
+    // Subscribe to group events when component mounts
+    subscribeToGroupEvents();
+
+    return () => {
+      unsubscribeFromGroupEvents();
+    };
+  }, [subscribeToGroupEvents, unsubscribeFromGroupEvents]);
 
   useEffect(() => {
     // When search query is entered, get all users for search suggestions
@@ -53,85 +120,522 @@ const Sidebar = () => {
   const displayUsers = isSearching
     ? allUsers
         .filter((user) => user._id !== authUser._id)
-        .filter((user) => 
-          user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+        .filter((user) =>
+          user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
         )
     : users.filter((user) => user._id !== authUser._id);
 
-  if (isUsersLoading) return <SidebarSkeleton />;
+  // Filter groups based on search
+  const displayGroups = isSearching
+    ? groups.filter((group) =>
+        group.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : groups;
+
+  // Handle tab switching
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    setSelectedUser(null);
+    setSelectedGroup(null);
+    setSearchQuery("");
+  };
+
+  // Handle group selection
+  const handleGroupSelect = async (group) => {
+    await setSelectedGroup(group);
+    setSelectedUser(null);
+  };
+
+  // Handle user selection
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+    setSelectedGroup(null);
+  };
+
+  // Handle mention badge click
+  const handleMentionBadgeClick = async (e, group) => {
+    e.stopPropagation(); // Prevent group selection
+
+    // First select the group
+    await setSelectedGroup(group);
+    setSelectedUser(null);
+
+    // Then navigate to first mention
+    const messageId = await navigateToFirstMention(group._id);
+    if (messageId) {
+      // Scroll to the message (implement in ChatContainer)
+      console.log("Navigate to message:", messageId);
+      // You can emit a custom event or use a callback here
+    }
+  };
+
+  // Handle status click to open viewer
+  const handleStatusClick = (contactIndex, statusIndex = 0) => {
+    setStatusViewerData({ contactIndex, statusIndex });
+    setShowStatusViewer(true);
+  };
+
+  // Handle my status click - only view if statuses exist
+  const handleMyStatusClick = () => {
+    if (myStatuses.length > 0) {
+      setStatusViewerData({ contactIndex: -1, statusIndex: 0 }); // -1 indicates my status
+      setShowStatusViewer(true);
+    }
+    // Do nothing if no statuses - user must use camera button to create
+  };
+
+  // Get combined statuses for viewer (my statuses + contact statuses)
+  const getCombinedStatusesForViewer = () => {
+    const myStatusContact = myStatuses.length > 0 ? {
+      user: authUser,
+      statuses: myStatuses,
+      hasUnviewed: false
+    } : null;
+
+    return myStatusContact ? [myStatusContact, ...contactStatuses] : contactStatuses;
+  };
+
+  // Handle pin toggle for chats
+  const handleChatPinToggle = (chatId, isPinned) => {
+    // Immediately update the local state for better UX
+    const updatedUsers = users.map(user =>
+      user._id === chatId ? { ...user, isPinned } : user
+    );
+
+    // Sort users to show pinned ones first
+    const sortedUsers = [...updatedUsers].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
+
+    // Update the store with the new sorted list
+    useChatStore.setState({ users: sortedUsers });
+
+    // Also refresh to ensure server sync (but UI already updated)
+    setTimeout(() => getUsers(), 100);
+  };
+
+  // Handle pin toggle for groups
+  const handleGroupPinToggle = (groupId, isPinned) => {
+    // Immediately update the local state for better UX
+    const updatedGroups = groups.map(group =>
+      group._id === groupId ? { ...group, isPinned } : group
+    );
+
+    // Sort groups to show pinned ones first
+    const sortedGroups = [...updatedGroups].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
+
+    // Update the store with the new sorted list
+    useGroupStore.setState({ groups: sortedGroups });
+
+    // Also refresh to ensure server sync (but UI already updated)
+    setTimeout(() => getGroups(), 100);
+  };
+
+  if (isUsersLoading || isGroupsLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-20 lg:w-72 border-r border-base-300 flex flex-col transition-all duration-200">
-      <div className="border-b border-base-300 w-full p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="size-6" />
-            <span className="font-medium hidden lg:block">Chats</span>
-          </div>
-        </div>
+    <>
+      <aside className="h-full w-20 lg:w-80 min-w-20 lg:min-w-80 max-w-20 lg:max-w-80 border-r border-base-300/50 flex flex-shrink-0 bg-gradient-to-b from-base-100 to-base-200/30">
+        {/* WhatsApp-style vertical tabs */}
+        <div className="w-20 bg-gradient-to-b from-base-200/80 to-base-300/50 border-r border-base-300/30 flex flex-col items-center py-4 gap-4">
+          {/* Profile Picture */}
+          <Link to="/profile" className="relative">
+            <img
+              src={authUser?.profilePic || "/avatar.png"}
+              alt="Profile"
+              className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+              title={`${authUser?.fullName} - Click to view profile`}
+            />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-base-200"></div>
+          </Link>
 
-        {/* Search Bar */}
-        <div className="mt-3 hidden lg:flex items-center gap-2 bg-base-200 px-2 rounded-md">
-          <Search className="w-4 h-4 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search by username"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent text-sm w-full focus:outline-none py-1"
-          />
-        </div>
-      </div>
-
-      <div className="overflow-y-auto w-full py-3">
-        {displayUsers.map((user) => {
-          const unreadCount = unreadCounts[user._id] || 0;
-          
-          return (
+          {/* Tab Icons */}
+          <div className="flex flex-col gap-4">
+            {/* Chats Tab */}
             <button
-              key={user._id}
-              onClick={() => setSelectedUser(user)}
-              className={`
-                w-full p-3 flex items-center gap-3
-                hover:bg-base-300 transition-colors
-                ${selectedUser?._id === user._id ? "bg-base-300 ring-1 ring-base-300" : ""}
-              `}
+              onClick={() => handleTabSwitch("chats")}
+              className={`relative p-3 rounded-xl transition-all duration-200 ${
+                activeTab === "chats"
+                  ? "bg-primary text-primary-content shadow-lg"
+                  : "bg-base-100 text-base-content hover:bg-base-300"
+              }`}
+              title="Chats"
             >
-              <div className="relative mx-auto lg:mx-0">
-                <img
-                  src={user.profilePic || "/avatar.png"}
-                  alt={user.username}
-                  className="size-12 object-cover rounded-full"
-                />
-                {onlineUsers.includes(user._id) && (
-                  <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
-                )}
-              </div>
-
-              <div className="hidden lg:block text-left min-w-0 flex-1">
-                <div className="font-medium truncate">{user.fullName}</div>
-                <div className="text-sm text-zinc-400">@{user.username}</div>
-              </div>
-              
-              {/* Unread message count badge */}
-              {unreadCount > 0 && (
-                <div className="flex items-center justify-center min-w-5 h-5 rounded-full bg-primary text-primary-content text-xs font-medium">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+              <MessageCircle size={20} />
+              {(unreadCounts.totalPersonal > 0) && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-error text-error-content rounded-full flex items-center justify-center text-xs font-bold">
+                  {unreadCounts.totalPersonal > 9 ? '9+' : unreadCounts.totalPersonal}
                 </div>
               )}
             </button>
-          );
-        })}
 
-        {searchQuery && displayUsers.length === 0 && (
-          <div className="text-center text-zinc-500 py-4">No users found</div>
-        )}
+            {/* Status Tab */}
+            <button
+              onClick={() => handleTabSwitch("status")}
+              className={`relative p-3 rounded-xl transition-all duration-200 ${
+                activeTab === "status"
+                  ? "bg-primary text-primary-content shadow-lg"
+                  : "bg-base-100 text-base-content hover:bg-base-300"
+              }`}
+              title="Status"
+            >
+              <Circle size={20} />
+              {/* Status indicator for new status updates */}
+              {getUnviewedStatusCount() > 0 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  {getUnviewedStatusCount() > 9 ? '9+' : getUnviewedStatusCount()}
+                </div>
+              )}
+            </button>
 
-        {!searchQuery && displayUsers.length === 0 && (
-          <div className="text-center text-zinc-500 py-4">No conversations yet</div>
-        )}
-      </div>
-    </aside>
+            {/* Groups Tab */}
+            <button
+              onClick={() => handleTabSwitch("groups")}
+              className={`relative p-3 rounded-xl transition-all duration-200 ${
+                activeTab === "groups"
+                  ? "bg-primary text-primary-content shadow-lg"
+                  : "bg-base-100 text-base-content hover:bg-base-300"
+              }`}
+              title="Groups"
+            >
+              <span className="text-lg">👥</span>
+              {(unreadCounts.totalGroups > 0 || unreadCounts.totalMentions > 0) && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-error text-error-content rounded-full flex items-center justify-center text-xs font-bold">
+                  {(unreadCounts.totalGroups + unreadCounts.totalMentions) > 9 ? '9+' : (unreadCounts.totalGroups + unreadCounts.totalMentions)}
+                </div>
+              )}
+            </button>
+          </div>
+
+          {/* Create Button */}
+          <div className="mt-auto">
+            {activeTab === "groups" && (
+              <button
+                onClick={() => setShowGroupCreateModal(true)}
+                className="p-3 bg-primary text-primary-content rounded-xl hover:bg-primary/80 transition-colors shadow-lg"
+                title="Create Group"
+              >
+                <Plus size={20} />
+              </button>
+            )}
+            {activeTab === "status" && (
+              <button
+                onClick={() => setShowStatusCreateModal(true)}
+                className="p-3 bg-primary text-primary-content rounded-xl hover:bg-primary/80 transition-colors shadow-lg"
+                title="Add Status"
+              >
+                <Camera size={20} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content Area - Hidden on mobile, shown on lg+ */}
+        <div className="hidden lg:flex flex-1 flex-col">
+          {/* Header with Search */}
+          <div className="border-b border-base-300 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">
+                {activeTab === "chats" && "Chats"}
+                {activeTab === "status" && "Status"}
+                {activeTab === "groups" && "Groups"}
+              </h2>
+
+              {activeTab === "groups" && (
+                <button
+                  onClick={() => setShowGroupCreateModal(true)}
+                  className="btn btn-ghost btn-sm btn-circle lg:hidden"
+                  title="Create Group"
+                >
+                  <Plus size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex items-center gap-2 bg-base-200/80 px-3 py-2.5 rounded-xl border border-base-300/30 backdrop-blur-sm hover:bg-base-200 transition-colors">
+              <Search className="w-4 h-4 text-primary/70" />
+              <input
+                type="text"
+                placeholder={
+                  activeTab === "chats" ? "Search chats..." :
+                  activeTab === "status" ? "Search status..." :
+                  "Search groups..."
+                }
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent text-sm w-full focus:outline-none placeholder:text-base-content/50"
+              />
+            </div>
+          </div>
+
+          {/* Content List */}
+          <div className="overflow-y-auto flex-1 py-3">
+            {activeTab === "chats" ? (
+              // Display users/chats
+            <>
+              {displayUsers.map((user) => {
+                const unreadCount = unreadCounts.personal?.[user._id] || 0;
+
+                return (
+                  <button
+                    key={user._id}
+                    onClick={() => handleUserSelect(user)}
+                    className={`group w-full p-3 flex items-center gap-3 hover:bg-base-300/60 transition-all duration-200 rounded-lg mx-2 ${selectedUser?._id === user._id ? "bg-primary/10 border border-primary/20 shadow-sm" : "hover:shadow-sm"}`}
+                  >
+                    <div className="relative mx-auto lg:mx-0">
+                      <img
+                        src={user.profilePic || "/avatar.png"}
+                        alt={user.username}
+                        className="size-12 object-cover rounded-full"
+                      />
+                      {onlineUsers.includes(user._id) && (
+                        <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
+                      )}
+                    </div>
+
+                    <div className="hidden lg:block text-left min-w-0 flex-1 max-w-[160px]">
+                      <div className="font-medium truncate flex items-center gap-2">
+                        <span className="truncate">{user.fullName}</span>
+                        {user.isPinned && (
+                          <span className="text-primary flex-shrink-0" title="Pinned">📌</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-zinc-400 truncate">@{user.username}</div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {/* Pin Button */}
+                      <PinButton
+                        itemId={user._id}
+                        itemType="chat"
+                        isPinned={user.isPinned || false}
+                        onPinToggle={handleChatPinToggle}
+                        className="opacity-60 group-hover:opacity-100 transition-opacity"
+                        asDiv={true}
+                        iconOnly={true}
+                      />
+
+                      {/* Unread message count badge */}
+                      {unreadCount > 0 && (
+                        <div className="flex items-center justify-center min-w-5 h-5 rounded-full bg-primary text-primary-content text-xs font-medium">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+
+              {searchQuery && displayUsers.length === 0 && (
+                <div className="text-center text-zinc-500 py-4">No users found</div>
+              )}
+
+              {!searchQuery && displayUsers.length === 0 && (
+                <div className="text-center text-zinc-500 py-4">No conversations yet</div>
+              )}
+            </>
+            ) : activeTab === "status" ? (
+              // Display status updates
+              <>
+                {/* My Status */}
+                <div className="px-4 mb-4">
+                  <div
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                      myStatuses.length > 0 ? 'hover:bg-base-300 cursor-pointer' : 'cursor-default'
+                    }`}
+                    onClick={handleMyStatusClick}
+                  >
+                    <div className="relative">
+                      <img
+                        src={authUser?.profilePic || "/avatar.png"}
+                        alt="My Status"
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                      {/* No plus sign - removed */}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">My status</div>
+                      <div className="text-sm text-base-content/60">
+                        {myStatuses.length > 0 ? `${myStatuses.length} update${myStatuses.length > 1 ? 's' : ''}` : 'No status updates'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Updates */}
+                <div className="px-4">
+                  {contactStatuses.length > 0 && (
+                    <div className="text-sm font-medium text-base-content/60 mb-3 px-3">Recent updates</div>
+                  )}
+
+                  {/* Contact Status Updates */}
+                  {contactStatuses.map((contact, contactIndex) => {
+                    return (
+                      <div
+                        key={contact.user._id}
+                        className="flex items-center gap-3 p-3 hover:bg-base-300 rounded-lg cursor-pointer transition-colors"
+                        onClick={() => handleStatusClick(contactIndex)}
+                      >
+                        <div className="relative">
+                          <img
+                            src={contact.user.profilePic || "/avatar.png"}
+                            alt={contact.user.fullName}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                          {contact.hasUnviewed && (
+                            <div className="absolute inset-0 rounded-full border-2 border-primary"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">{contact.user.fullName}</div>
+                          <div className="text-sm text-base-content/60">
+                            {contact.statuses.length} update{contact.statuses.length > 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* No status message */}
+                  {contactStatuses.length === 0 && (
+                    <div className="text-center text-zinc-500 py-8">
+                      <Circle size={48} className="mx-auto mb-3 opacity-50" />
+                      <p className="mb-2">No status updates</p>
+                      <p className="text-sm">Status updates from your contacts will appear here</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              // Display groups
+            <>
+              {displayGroups.map((group) => {
+                const memberCount = group.memberCount || group.members?.length || 0;
+                const groupUnreadCount = unreadCounts.groups?.[group._id] || 0;
+                const mentionCount = unreadCounts.mentions?.[group._id] || 0;
+
+                return (
+                  <button
+                    key={group._id}
+                    onClick={() => handleGroupSelect(group)}
+                    className={`group w-full p-3 flex items-center gap-3 hover:bg-base-300/60 transition-all duration-200 rounded-lg mx-2 ${selectedGroup?._id === group._id ? "bg-primary/10 border border-primary/20 shadow-sm" : "hover:shadow-sm"}`}
+                  >
+                    <div className="relative mx-auto lg:mx-0">
+                      {group.avatar ? (
+                        <img
+                          src={group.avatar}
+                          alt={group.name}
+                          className="size-12 object-cover rounded-full"
+                        />
+                      ) : (
+                        <div className="size-12 bg-primary/20 rounded-full flex items-center justify-center">
+                          <span className="text-primary text-xl">👥</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="hidden lg:block text-left min-w-0 flex-1 max-w-[160px]">
+                      <div className="font-medium truncate flex items-center gap-2">
+                        <span className="truncate">{group.name}</span>
+                        {group.isPinned && (
+                          <span className="text-primary flex-shrink-0" title="Pinned">📌</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-zinc-400 truncate">
+                        {memberCount} member{memberCount !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+
+                    {/* Pin Button and Unread/mention badges */}
+                    <div className="flex items-center gap-1">
+                      {/* Pin Button */}
+                      <PinButton
+                        itemId={group._id}
+                        itemType="group"
+                        isPinned={group.isPinned || false}
+                        onPinToggle={handleGroupPinToggle}
+                        className="opacity-60 group-hover:opacity-100 transition-opacity"
+                        asDiv={true}
+                        iconOnly={true}
+                      />
+
+                      {/* Unread and mention badges */}
+                      <div className="flex flex-col gap-1">
+                      {/* Mention count (priority) - clickable */}
+                      {mentionCount > 0 && (
+                        <button
+                          onClick={(e) => handleMentionBadgeClick(e, group)}
+                          className="flex items-center justify-center min-w-5 h-5 rounded-full bg-error text-error-content text-xs font-medium hover:bg-error/80 transition-colors"
+                          title="Click to go to first mention"
+                        >
+                          @{mentionCount > 99 ? '99+' : mentionCount}
+                        </button>
+                      )}
+
+                      {/* Regular unread count */}
+                      {groupUnreadCount > 0 && mentionCount === 0 && (
+                        <div className="flex items-center justify-center min-w-5 h-5 rounded-full bg-primary text-primary-content text-xs font-medium">
+                          {groupUnreadCount > 99 ? '99+' : groupUnreadCount}
+                        </div>
+                      )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {searchQuery && displayGroups.length === 0 && (
+                <div className="text-center text-zinc-500 py-4">No groups found</div>
+              )}
+
+              {!searchQuery && displayGroups.length === 0 && (
+                <div className="text-center text-zinc-500 py-4">
+                  <div className="space-y-2">
+                    <p>No groups yet</p>
+                    <button
+                      onClick={() => setShowGroupCreateModal(true)}
+                      className="btn btn-primary btn-sm"
+                    >
+                      Create your first group
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Group Create Modal */}
+      <GroupCreateModal
+        isOpen={showGroupCreateModal}
+        onClose={() => setShowGroupCreateModal(false)}
+      />
+
+      {/* Status Create Modal */}
+      <StatusCreateModal
+        isOpen={showStatusCreateModal}
+        onClose={() => setShowStatusCreateModal(false)}
+      />
+
+      {/* Status Viewer */}
+      <StatusViewer
+        isOpen={showStatusViewer}
+        onClose={() => setShowStatusViewer(false)}
+        contactStatuses={getCombinedStatusesForViewer()}
+        initialContactIndex={statusViewerData.contactIndex === -1 ? 0 : (statusViewerData.contactIndex + (myStatuses.length > 0 ? 1 : 0))}
+        initialStatusIndex={statusViewerData.statusIndex}
+      />
+    </>
   );
 };
 

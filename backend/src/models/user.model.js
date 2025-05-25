@@ -43,12 +43,54 @@ const userSchema = new mongoose.Schema(
         lastSeen: {
             type: Date,
             default: Date.now
-        }
+        },
+        // 2FA fields
+        twoFactorEnabled: {
+            type: Boolean,
+            default: false
+        },
+        twoFactorSecret: {
+            type: String,
+            default: null
+        },
+        backupCodes: [{
+            code: String,
+            used: {
+                type: Boolean,
+                default: false
+            },
+            usedAt: Date
+        }],
+
+        // Pinned chats and groups (user-specific preferences)
+        pinnedChats: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }],
+        pinnedGroups: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Group"
+        }],
+
+        // Blocked users
+        blockedUsers: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }],
+
+        // End-to-end encryption public key
+        publicKey: {
+            type: String,
+            default: null
+        },
+
     },
     {
         timestamps: true,
     }
 );
+
+
 
 const User = mongoose.model("User", userSchema);
 
