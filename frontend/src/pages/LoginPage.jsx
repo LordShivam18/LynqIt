@@ -5,7 +5,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import GoogleUsernamePrompt from "../components/GoogleUsernamePrompt";
-import { getGoogleClientId } from "../config/environment";
 import toast from "react-hot-toast";
 
 const LoginPage = () => {
@@ -17,10 +16,6 @@ const LoginPage = () => {
 
   const navigate = useNavigate();
   const { login, isLoggingIn, loginWithGoogle, googleAuthInfo } = useAuthStore();
-
-  // Check if Google OAuth is available
-  const googleClientId = getGoogleClientId();
-  const isGoogleOAuthAvailable = googleClientId && googleClientId !== 'your-google-oauth-client-id-here';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,26 +42,13 @@ const LoginPage = () => {
   };
 
   const handleGoogleLogin = async (credentialResponse) => {
-    try {
-      console.log('Google OAuth Response:', credentialResponse);
-
-      if (!credentialResponse || !credentialResponse.credential) {
-        toast.error('Google authentication failed - no credential received');
-        return;
-      }
-
-      const result = await loginWithGoogle(credentialResponse.credential);
-
-      // If successful login, navigate to homepage
-      if (result && result.success) {
-        navigate('/');
-      }
-      // If username is needed (new user), the modal will show automatically
-      // No need to navigate - user will stay on current page until they create a username
-    } catch (error) {
-      console.error('Google OAuth Error:', error);
-      toast.error('Google authentication failed. Please try again.');
+    const result = await loginWithGoogle(credentialResponse.credential);
+    // If successful login, navigate to homepage
+    if (result.success) {
+      navigate('/');
     }
+    // If username is needed (new user), the modal will show automatically
+    // No need to navigate - user will stay on current page until they create a username
   };
 
   return (
@@ -157,35 +139,21 @@ const LoginPage = () => {
 
           {/* Google Login Button */}
           <div className="flex justify-center">
-            {isGoogleOAuthAvailable ? (
-              <div className="google-login-button" title="Sign in with Google">
-                <GoogleLogin
-                  onSuccess={handleGoogleLogin}
-                  onError={(error) => {
-                    console.error('Google Login Failed:', error);
-                    toast.error('Google login failed. Please try again.');
-                  }}
-                  useOneTap={false} // Disable one-tap for better compatibility
-                  theme="outline"
-                  size="large"
-                  text="signin_with"
-                  shape="rectangular"
-                  logo_alignment="center"
-                  width="100%"
-                  auto_select={false}
-                  cancel_on_tap_outside={true}
-                />
-              </div>
-            ) : (
-              <div className="w-full">
-                <div className="alert alert-warning">
-                  <span className="text-sm">
-                    ⚠️ Google OAuth is not configured properly.
-                    {import.meta.env.MODE === 'development' ? ' Check your environment variables.' : ' Please contact support.'}
-                  </span>
-                </div>
-              </div>
-            )}
+            <div className="google-login-button" title="Sign in with Google">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => {
+                  console.error('Google Login Failed');
+                }}
+                useOneTap
+                theme="outline"
+                size="large"
+                text="signin_with"
+                shape="rectangular"
+                logo_alignment="center"
+                width="100%"
+              />
+            </div>
           </div>
 
           <div className="text-center mt-4">

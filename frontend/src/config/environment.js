@@ -1,30 +1,5 @@
 // Environment configuration for production-ready deployment
 
-// Helper function to get Google Client ID with multiple fallbacks
-const getGoogleClientIdWithFallbacks = () => {
-  // PRODUCTION HARDCODED FIX - Always use the correct Google Client ID
-  const PRODUCTION_GOOGLE_CLIENT_ID = '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com';
-
-  // Try multiple sources in order of preference
-  const sources = [
-    import.meta.env.VITE_GOOGLE_CLIENT_ID,
-    window.__APP_CONFIG__?.GOOGLE_CLIENT_ID,
-    PRODUCTION_GOOGLE_CLIENT_ID // Always fallback to the correct ID
-  ];
-
-  for (const source of sources) {
-    if (source && source !== 'your-google-oauth-client-id-here') {
-      console.log('🔑 Using Google Client ID from:', source === import.meta.env.VITE_GOOGLE_CLIENT_ID ? 'Vite env' :
-                  source === window.__APP_CONFIG__?.GOOGLE_CLIENT_ID ? 'Runtime config' : 'Hardcoded fallback');
-      return source;
-    }
-  }
-
-  // Force return the production client ID if all else fails
-  console.log('🔑 Force using production Google Client ID');
-  return PRODUCTION_GOOGLE_CLIENT_ID;
-};
-
 export const getEnvironmentConfig = () => {
   const isDevelopment = import.meta.env.MODE === 'development';
   const isProduction = import.meta.env.MODE === 'production';
@@ -49,16 +24,9 @@ export const getEnvironmentConfig = () => {
       ? 'http://localhost:5001'
       : window.location.origin,
 
-    // OAuth Configuration with multiple fallbacks
+    // OAuth Configuration
     oauth: {
-      googleClientId: getGoogleClientIdWithFallbacks(),
-    },
-
-    // Debug info for production
-    debug: {
-      googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      nodeEnv: import.meta.env.NODE_ENV,
-      mode: import.meta.env.MODE,
+      googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com',
     },
 
     // Feature flags
