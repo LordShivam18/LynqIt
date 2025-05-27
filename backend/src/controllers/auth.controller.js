@@ -298,8 +298,21 @@ export const googleAuth = async (req, res) => {
             return res.status(400).json({ message: "Google credential is required" });
         }
 
-        // Decode the JWT from Google to get user info
-        const decodedToken = jwt.decode(credential);
+        let decodedToken;
+
+        // Handle both JWT tokens and JSON credential objects
+        if (typeof credential === 'string') {
+            try {
+                // Try to parse as JSON first (new format)
+                decodedToken = JSON.parse(credential);
+            } catch (e) {
+                // If JSON parsing fails, try JWT decode (old format)
+                decodedToken = jwt.decode(credential);
+            }
+        } else {
+            // Already an object
+            decodedToken = credential;
+        }
 
         if (!decodedToken) {
             return res.status(400).json({ message: "Invalid Google credential" });

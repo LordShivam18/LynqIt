@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User, Check, X, Info } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
+import GoogleButton from "../components/GoogleButton";
 import GoogleUsernamePrompt from "../components/GoogleUsernamePrompt";
 import axios from "axios";
 
@@ -126,14 +126,18 @@ const SignUpPage = () => {
     }
   };
 
-  const handleGoogleSignup = async (credentialResponse) => {
-    const result = await loginWithGoogle(credentialResponse.credential);
+  const handleGoogleSignup = async (result) => {
     // If successful login, navigate to homepage
-    if (result.success) {
+    if (result && result.success) {
       navigate('/');
     }
     // If username is needed, the modal will show automatically
     // No need to navigate - user will stay on current page until they create a username
+  };
+
+  const handleGoogleError = (error) => {
+    console.error('Google signup error:', error);
+    toast.error('Google signup failed. Please try again.');
   };
 
   return (
@@ -285,21 +289,12 @@ const SignUpPage = () => {
 
           {/* Google Sign Up Button */}
           <div className="flex justify-center">
-            <div className="google-login-button" title="Sign up with Google">
-              <GoogleLogin
-                onSuccess={handleGoogleSignup}
-                onError={() => {
-                  toast.error('Google Sign Up Failed');
-                }}
-                useOneTap
-                theme="outline"
-                size="large"
-                text="signup_with"
-                shape="rectangular"
-                logo_alignment="center"
-                width="100%"
-              />
-            </div>
+            <GoogleButton
+              text="Continue with Google"
+              onSuccess={handleGoogleSignup}
+              onError={handleGoogleError}
+              disabled={isSigningUp}
+            />
           </div>
 
           <div className="text-center mt-4">

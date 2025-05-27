@@ -23,22 +23,8 @@ services:
         sync: false
       - key: EMAIL_PASSWORD
         sync: false
-      # Cloudinary configuration - set these in the Render dashboard
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
       - key: PRODUCTION_URL
         value: https://lynqit.onrender.com
       - key: LOCAL_URL
         value: http://localhost:5173
-      # Google OAuth configuration - set this in the Render dashboard
-      - key: VITE_GOOGLE_CLIENT_ID
-        value: 461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com
-      - key: GOOGLE_CLIENT_ID
-        value: 461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
     autoDeploy: true

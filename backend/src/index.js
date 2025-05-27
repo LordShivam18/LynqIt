@@ -45,35 +45,50 @@ app.use(securityHeaders);
 app.use(sanitizeInput);
 app.use(generateCSRFToken);
 
-// Function to get the appropriate frontend URL based on environment
-const getFrontendUrl = () => {
+// Function to get allowed origins based on environment
+const getAllowedOrigins = () => {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
   if (nodeEnv === 'production') {
-    return process.env.PRODUCTION_URL || 'https://lynqit.onrender.com';
+    return [
+      process.env.PRODUCTION_URL || 'https://lynqit.onrender.com',
+      'https://lynqit.onrender.com',
+      'https://www.lynqit.onrender.com'
+    ];
   } else {
-    return process.env.LOCAL_URL || 'http://localhost:5173';
+    return [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000',
+      process.env.LOCAL_URL || 'http://localhost:5173'
+    ];
   }
 };
 
-// CORS configuration based on environment
-if (process.env.NODE_ENV === "production") {
-  // In production, use the production URL for CORS
-  app.use(cors({
-    origin: getFrontendUrl(),
-    credentials: true
-  }));
-  console.log(`CORS configured for production with origin: ${getFrontendUrl()}`);
-} else {
-  // In development, use the local URL for CORS
-  app.use(
-    cors({
-      origin: getFrontendUrl(),
-      credentials: true,
-    })
-  );
-  console.log(`CORS configured for development with origin: ${getFrontendUrl()}`);
-}
+// Enhanced CORS configuration for Google OAuth compatibility
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowedOrigins = getAllowedOrigins();
+
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  exposedHeaders: ['X-CSRF-Token']
+};
+
+app.use(cors(corsOptions));
+console.log(`CORS configured for ${process.env.NODE_ENV || 'development'} with origins:`, getAllowedOrigins());
 
 // Add request logging middleware
 app.use((req, res, next) => {
@@ -149,6 +164,6 @@ app.use((err, req, res, next) => {
 server.listen(PORT, () => {
   console.log(`Server is running on PORT: ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`Frontend URL: ${getFrontendUrl()}`);
+  console.log(`Allowed Origins:`, getAllowedOrigins());
   connectDB();
 });

@@ -2,25 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google button styling */
-.google-login-button {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Custom Google button styling */
+.custom-google-button {
+  @apply w-full flex items-center justify-center gap-3 px-6 py-3 border border-base-300 rounded-full bg-base-100 hover:bg-base-200 transition-all duration-200 text-base-content font-medium;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.google-login-button iframe {
-  width: 100% !important;
+.custom-google-button:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
-.google-login-button button {
-  width: 100% !important;
+.custom-google-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Add this to ensure Google buttons render properly */
-.google-login-button div[style] {
-  width: 100% !important;
+.custom-google-button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+  transform: none !important;
+}
+
+/* Google logo styling */
+.google-logo {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 /* 3D transform utilities for AuthImagePattern */
