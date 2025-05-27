@@ -30,7 +30,7 @@ export const generateCSRFToken = (req, res, next) => {
         res.cookie('csrf-token', token, {
             httpOnly: false, // Allow client-side access for CSRF token
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
     }

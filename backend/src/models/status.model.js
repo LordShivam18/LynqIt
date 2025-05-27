@@ -55,8 +55,7 @@ const statusSchema = new mongoose.Schema(
       type: Date,
       default: function() {
         return new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
-      },
-      index: { expireAfterSeconds: 0 } // MongoDB TTL index
+      }
     },
     // Viewers tracking
     viewers: [{
@@ -161,7 +160,7 @@ const statusSchema = new mongoose.Schema(
 
 // Index for efficient queries
 statusSchema.index({ userId: 1, expiresAt: 1 });
-statusSchema.index({ expiresAt: 1 }); // For cleanup
+statusSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for automatic cleanup
 statusSchema.index({ "viewers.userId": 1 });
 
 // Virtual for checking if status is expired
