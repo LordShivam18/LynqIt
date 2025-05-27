@@ -26,6 +26,15 @@ router.post("/login", login);
 router.post("/logout", logout);
 router.post("/google", googleAuth);
 
+// Google OAuth health check
+router.get("/google/health", (_req, res) => {
+    res.status(200).json({
+        message: "Google OAuth endpoint is accessible",
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV
+    });
+});
+
 // OTP verification routes
 router.post("/request-otp", requestOTP);
 router.post("/verify-otp", verifyUserOTP);

@@ -53,7 +53,12 @@ const getAllowedOrigins = () => {
     return [
       process.env.PRODUCTION_URL || 'https://lynqit.onrender.com',
       'https://lynqit.onrender.com',
-      'https://www.lynqit.onrender.com'
+      'https://www.lynqit.onrender.com',
+      // Also allow localhost for testing production builds locally
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000'
     ];
   } else {
     return [
@@ -82,9 +87,10 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
-  exposedHeaders: ['X-CSRF-Token']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
+  exposedHeaders: ['X-CSRF-Token'],
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
 app.use(cors(corsOptions));

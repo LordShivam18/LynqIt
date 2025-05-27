@@ -292,7 +292,6 @@ export const getAllUsers = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
     try {
-        console.log(`Google OAuth request - NODE_ENV: ${process.env.NODE_ENV}`);
         const { credential, username } = req.body;
 
         if (!credential) {
@@ -330,7 +329,6 @@ export const googleAuth = async (req, res) => {
 
         if (user) {
             // User exists, login
-            console.log(`Google OAuth: Existing user login for ${email}`);
             generateToken(user._id, res);
 
             return res.status(200).json({

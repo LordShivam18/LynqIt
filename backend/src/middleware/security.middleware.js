@@ -5,8 +5,10 @@ import User from '../models/user.model.js';
 
 // CSRF Protection Middleware
 export const csrfProtection = (req, res, next) => {
-    // Skip CSRF for GET requests and Socket.IO
-    if (req.method === 'GET' || req.path.startsWith('/socket.io')) {
+    // Skip CSRF for GET requests, Socket.IO, and Google OAuth
+    if (req.method === 'GET' ||
+        req.path.startsWith('/socket.io') ||
+        req.path === '/api/auth/google') {
         return next();
     }
 
@@ -27,10 +29,12 @@ export const csrfProtection = (req, res, next) => {
 export const generateCSRFToken = (req, res, next) => {
     if (!req.cookies['csrf-token']) {
         const token = crypto.randomBytes(32).toString('hex');
+        const isProduction = process.env.NODE_ENV === 'production';
+
         res.cookie('csrf-token', token, {
             httpOnly: false, // Allow client-side access for CSRF token
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            secure: isProduction,
+            sameSite: isProduction ? 'lax' : 'strict',
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
     }

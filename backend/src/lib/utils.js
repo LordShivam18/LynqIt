@@ -5,11 +5,14 @@ export const generateToken = (userId, res) => {
         expiresIn: "60d"
     });
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     res.cookie("jwt", token, {
         maxAge: 60 * 24 * 60 * 60 * 1000, // 60 days in milliseconds
         httpOnly: true, // Prevents client-side JavaScript from accessing the cookie
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // Allow cross-site cookies in production
-        secure: process.env.NODE_ENV === "production", // Set to true in production for HTTPS
+        sameSite: isProduction ? "lax" : "strict", // Use lax for better compatibility in production
+        secure: isProduction, // Set to true in production for HTTPS
+        domain: isProduction ? undefined : undefined, // Let browser handle domain
     });
 
     return token;
