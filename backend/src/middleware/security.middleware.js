@@ -46,18 +46,19 @@ export const securityHeaders = (req, res, next) => {
 
     // Add security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // Changed from DENY to SAMEORIGIN for Google OAuth
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-    // Content Security Policy
+    // Content Security Policy - Updated for Google OAuth compatibility
     res.setHeader('Content-Security-Policy',
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; " +
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://gstatic.com; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
         "font-src 'self' https://fonts.gstatic.com; " +
-        "img-src 'self' data: https: blob:; " +
-        "connect-src 'self' https: wss: ws:; " +
+        "img-src 'self' data: https: blob: https://lh3.googleusercontent.com; " +
+        "connect-src 'self' https: wss: ws: https://accounts.google.com https://www.googleapis.com; " +
+        "frame-src 'self' https://accounts.google.com; " +
         "media-src 'self' https: blob:; " +
         "object-src 'none'; " +
         "base-uri 'self';"

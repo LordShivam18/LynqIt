@@ -86,17 +86,16 @@ export const useAuthStore = create((set, get) => ({
         authUser: res.data,
         googleAuthInfo: null // Clear any existing google auth info
       });
-      toast.success("Logged in with Google successfully");
+      toast.success("Logged in successfully");
 
       get().connectSocket();
       return { success: true };
     } catch (error) {
-      toast.error(error.response?.data?.message || "Google login failed");
-      return { error: true };
+      const errorMessage = error.response?.data?.message || "Google login failed";
+      toast.error(errorMessage);
+      throw error;
     } finally {
-      if (!get().googleAuthInfo) {
-        set({ isLoggingIn: false });
-      }
+      set({ isLoggingIn: false });
     }
   },
 

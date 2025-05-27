@@ -4,9 +4,9 @@ import { Loader2 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
 
-const GoogleButton = ({ 
-  text = "Continue with Google", 
-  onSuccess, 
+const GoogleButton = ({
+  text = "Continue with Google",
+  onSuccess,
   onError,
   disabled = false,
   className = ""
@@ -22,13 +22,13 @@ const GoogleButton = ({
         const userInfoResponse = await fetch(
           `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenResponse.access_token}`
         );
-        
+
         if (!userInfoResponse.ok) {
-          throw new Error('Failed to get user info from Google');
+          throw new Error(`Failed to get user info from Google: ${userInfoResponse.status}`);
         }
-        
+
         const userInfo = await userInfoResponse.json();
-        
+
         // Create a credential-like object for our backend
         const credential = {
           email: userInfo.email,
@@ -40,13 +40,14 @@ const GoogleButton = ({
 
         // Call our backend with the user info
         const result = await loginWithGoogle(JSON.stringify(credential));
-        
+
         if (onSuccess) {
           onSuccess(result);
         }
       } catch (error) {
         console.error('Google login error:', error);
-        toast.error('Google login failed. Please try again.');
+        const errorMessage = error.response?.data?.message || error.message || 'Google login failed. Please try again.';
+        toast.error(errorMessage);
         if (onError) {
           onError(error);
         }
@@ -56,7 +57,8 @@ const GoogleButton = ({
     },
     onError: (error) => {
       console.error('Google OAuth error:', error);
-      toast.error('Google login failed. Please try again.');
+      const errorMessage = error.error_description || error.error || 'Google OAuth failed. Please try again.';
+      toast.error(errorMessage);
       if (onError) {
         onError(error);
       }

@@ -26,11 +26,9 @@ export const getEnvironmentConfig = () => {
 
     // OAuth Configuration
     oauth: {
-      googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || (
-        isDevelopment
-          ? '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com' // Development client ID
-          : 'your-production-google-client-id.apps.googleusercontent.com' // Production client ID
-      ),
+      googleClientId: isDevelopment
+        ? (import.meta.env.VITE_GOOGLE_CLIENT_ID || '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com')
+        : '461128965954-90fcltci30rissdg8825l3lv5e0ifpfd.apps.googleusercontent.com', // Production Google Client ID
     },
 
     // Feature flags
