@@ -32,5 +32,8 @@
     "react"
   ],
   "author": "",
-  "license": "ISC"
-} 
+  "license": "ISC",
+  "dependencies": {
+    "ua-parser-js": "^2.0.3"
+  }
+}

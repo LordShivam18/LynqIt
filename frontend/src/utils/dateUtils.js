@@ -117,18 +117,6 @@ export const isSameDay = (date1, date2) => {
   return format(d1, 'yyyy-MM-dd') === format(d2, 'yyyy-MM-dd');
 };
 
-// Format typing indicator timestamp
-export const formatTypingTime = () => {
-  const timeFormat = getTimeFormat();
-  const now = new Date();
-  
-  if (timeFormat === '24') {
-    return format(now, 'HH:mm');
-  } else {
-    return format(now, 'h:mm a');
-  }
-};
-
 // Format message status timestamps (delivered, seen)
 export const formatStatusTime = (timestamp) => {
   if (!timestamp) return '';

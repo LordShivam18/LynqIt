@@ -5,7 +5,7 @@ import { io, getReceiverSocketId } from "../lib/socket.js";
 // Create text status
 export const createTextStatus = async (req, res) => {
   try {
-    const { text, backgroundColor, fontStyle, visibility, specificUsers } = req.body;
+    const { text, backgroundColor, fontStyle, fontFamily, textAlign, visibility, specificUsers } = req.body;
 
     // Validate text length
     if (!text || text.trim().length === 0) {
@@ -23,6 +23,8 @@ export const createTextStatus = async (req, res) => {
       text: text.trim(),
       backgroundColor: backgroundColor || "#075E54",
       fontStyle: fontStyle || "normal",
+      fontFamily: fontFamily || "sans-serif",
+      textAlign: textAlign || "center",
       visibility: visibility || "contacts",
       specificUsers: specificUsers || []
     });

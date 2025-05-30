@@ -12,7 +12,8 @@ import {
   editMessage,
   replyToMessage,
   markMentionsAsRead,
-  getFirstUnreadMention
+  getFirstUnreadMention,
+  forwardMessage
 } from "../controllers/message.controller.js";
 
 import {
@@ -44,6 +45,9 @@ router.post("/reply/:messageId", protectRoute, replyToMessage);
 router.post("/react/:messageId", protectRoute, reactToMessage);
 router.post("/status/:status", protectRoute, updateMessageStatus);
 router.post("/lastseen", protectRoute, updateLastSeen);
+router.post("/reaction", protectRoute, reactToMessage);
+router.post("/reply", protectRoute, replyToMessage);
+router.post("/forward", protectRoute, forwardMessage);
 
 // Message modification routes
 router.put("/:id", protectRoute, editMessage);

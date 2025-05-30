@@ -574,15 +574,6 @@ io.on("connection", async (socket) => {
     console.log(`User ${userId} left group room: group_${groupId}`);
   });
 
-  // Handle group typing indicators
-  socket.on("groupTyping", ({ groupId, isTyping }) => {
-    socket.to(`group_${groupId}`).emit("userTyping", {
-      userId,
-      groupId,
-      isTyping
-    });
-  });
-
   // Handle message replies
   socket.on("messageReply", async ({ messageId, replyText, groupId, receiverId }) => {
     try {

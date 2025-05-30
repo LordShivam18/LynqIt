@@ -392,14 +392,18 @@ const StatusViewer = ({ isOpen, onClose, contactStatuses, initialContactIndex = 
         {currentStatus.type === "text" ? (
           <div
             className="w-full h-full flex items-center justify-center p-8"
-            style={{ backgroundColor: currentStatus.backgroundColor }}
+            style={{ backgroundColor: currentStatus.backgroundColor || "#075E54" }}
           >
-            <div
-              className={`text-white text-center text-2xl max-w-md ${
-                currentStatus.fontStyle === "bold" ? "font-bold" :
-                currentStatus.fontStyle === "italic" ? "italic" :
+            <div 
+              className={`w-full max-w-lg text-white break-words whitespace-pre-wrap ${
+                currentStatus.fontStyle === "bold" ? "font-bold" : 
+                currentStatus.fontStyle === "italic" ? "italic" : 
                 currentStatus.fontStyle === "bold-italic" ? "font-bold italic" : ""
               }`}
+              style={{ 
+                textAlign: currentStatus.textAlign || "center",
+                fontFamily: currentStatus.fontFamily || "sans-serif"
+              }}
             >
               {currentStatus.text}
             </div>

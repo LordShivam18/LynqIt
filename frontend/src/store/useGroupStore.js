@@ -468,25 +468,24 @@ export const useGroupStore = create((set, get) => ({
     });
 
     // Listen for typing indicators
-    socket.on("userTyping", ({ userId, groupId, isTyping }) => {
-      set(state => {
-        const currentTyping = state.groupTypingUsers[groupId] || [];
-        let newTyping;
+    // socket.on("userTyping", ({ userId, groupId, isTyping }) => {
+    //   const state = get();
+    //   const currentTyping = state.groupTypingUsers[groupId] || [];
+    //   let newTyping;
 
-        if (isTyping) {
-          newTyping = currentTyping.includes(userId) ? currentTyping : [...currentTyping, userId];
-        } else {
-          newTyping = currentTyping.filter(id => id !== userId);
-        }
+    //   if (isTyping) {
+    //     newTyping = currentTyping.includes(userId) ? currentTyping : [...currentTyping, userId];
+    //   } else {
+    //     newTyping = currentTyping.filter(id => id !== userId);
+    //   }
 
-        return {
-          groupTypingUsers: {
-            ...state.groupTypingUsers,
-            [groupId]: newTyping
-          }
-        };
-      });
-    });
+    //   set({
+    //     groupTypingUsers: {
+    //       ...state.groupTypingUsers,
+    //       [groupId]: newTyping
+    //     }
+    //   });
+    // });
 
     // Listen for group key rotation events
     socket.on("groupKeyRotated", async ({ groupId, newKeyVersion, rotatedBy }) => {
@@ -578,18 +577,10 @@ export const useGroupStore = create((set, get) => ({
       socket.off("groupUpdated");
       socket.off("groupMembersAdded");
       socket.off("groupMemberRemoved");
-      socket.off("userTyping");
+      // socket.off("userTyping");
       socket.off("groupKeyRotated");
       socket.off("unreadCountUpdate");
       socket.off("userMentioned");
-    }
-  },
-
-  // Send typing indicator for group
-  sendGroupTyping: (groupId, isTyping) => {
-    const socket = useAuthStore.getState().socket;
-    if (socket) {
-      socket.emit("groupTyping", { groupId, isTyping });
     }
   },
 

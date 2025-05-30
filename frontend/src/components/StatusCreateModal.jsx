@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { X, Type, Image, Camera, Palette, Bold, Italic } from "lucide-react";
+import { X, Type, Image, Camera, Palette, Bold, Italic, AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { useStatusStore } from "../store/useStatusStore";
 import toast from "react-hot-toast";
 
@@ -9,6 +9,8 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
   const [caption, setCaption] = useState("");
   const [backgroundColor, setBackgroundColor] = useState("#075E54");
   const [fontStyle, setFontStyle] = useState("normal");
+  const [fontFamily, setFontFamily] = useState("sans-serif");
+  const [textAlign, setTextAlign] = useState("center");
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [visibility, setVisibility] = useState("contacts");
@@ -18,7 +20,7 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
   const fileInputRef = useRef(null);
   const { createTextStatus, createImageStatus, isCreatingStatus } = useStatusStore();
 
-  // Background color options
+  // Background color options - extended color palette
   const backgroundColors = [
     "#075E54", // WhatsApp Green
     "#128C7E", // Dark Green
@@ -32,6 +34,33 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
     "#DDA0DD", // Plum
     "#FFB6C1", // Light Pink
     "#87CEEB", // Sky Blue
+    "#D7263D", // Crimson
+    "#F46036", // Burnt Orange
+    "#2E294E", // Dark Purple
+    "#1B998B", // Jade
+    "#C5D86D", // Citron
+    "#F9DC5C", // Mustard Yellow
+    "#EFCB68", // Gold
+    "#E8C1C5", // Rose
+    "#590004", // Maroon
+    "#003459", // Navy Blue
+    "#00A878", // Emerald Green
+    "#6C5B7B", // Dark Lavender
+  ];
+
+  // Font family options
+  const fontFamilies = [
+    { name: "Sans Serif", value: "sans-serif" },
+    { name: "Serif", value: "serif" },
+    { name: "Monospace", value: "monospace" },
+    { name: "Cursive", value: "cursive" },
+    { name: "Fantasy", value: "fantasy" },
+    { name: "System UI", value: "system-ui" },
+    { name: "Arial", value: "Arial, sans-serif" },
+    { name: "Georgia", value: "Georgia, serif" },
+    { name: "Comic Sans MS", value: "'Comic Sans MS', cursive" },
+    { name: "Impact", value: "Impact, fantasy" },
+    { name: "Courier New", value: "'Courier New', monospace" },
   ];
 
   const handleImageSelect = (e) => {
@@ -67,6 +96,8 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
           text: text.trim(),
           backgroundColor,
           fontStyle,
+          fontFamily,
+          textAlign,
           visibility,
           specificUsers: visibility === "onlyShareWith" ? specificUsers : []
         });
@@ -102,6 +133,8 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
     setCaption("");
     setBackgroundColor("#075E54");
     setFontStyle("normal");
+    setFontFamily("sans-serif");
+    setTextAlign("center");
     setSelectedImage(null);
     setImagePreview(null);
     setStatusType("text");
@@ -168,11 +201,12 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder="What's on your mind?"
-                    className={`w-full h-full bg-transparent text-white placeholder-white/70 resize-none border-none outline-none text-center text-lg ${
+                    className={`w-full h-full bg-transparent text-white placeholder-white/70 resize-none border-none outline-none text-${textAlign} text-lg ${
                       fontStyle === "bold" ? "font-bold" :
                       fontStyle === "italic" ? "italic" :
                       fontStyle === "bold-italic" ? "font-bold italic" : ""
                     }`}
+                    style={{ fontFamily }}
                     maxLength={700}
                   />
                   <div className="absolute bottom-2 right-2 text-white/70 text-xs">
@@ -198,6 +232,22 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
+                {/* Font Family */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Font Family</label>
+                  <select
+                    value={fontFamily}
+                    onChange={(e) => setFontFamily(e.target.value)}
+                    className="select select-bordered w-full"
+                  >
+                    {fontFamilies.map((font) => (
+                      <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
+                        {font.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Font Style */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Font Style</label>
@@ -218,7 +268,7 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
                         fontStyle === "bold" ? "bg-primary text-primary-content" : "bg-base-200"
                       }`}
                     >
-                      Bold
+                      <Bold size={16} />
                     </button>
                     <button
                       type="button"
@@ -227,7 +277,50 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
                         fontStyle === "italic" ? "bg-primary text-primary-content" : "bg-base-200"
                       }`}
                     >
-                      Italic
+                      <Italic size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontStyle("bold-italic")}
+                      className={`px-3 py-1 rounded font-bold italic ${
+                        fontStyle === "bold-italic" ? "bg-primary text-primary-content" : "bg-base-200"
+                      }`}
+                    >
+                      B+I
+                    </button>
+                  </div>
+                </div>
+
+                {/* Text Alignment */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Text Alignment</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTextAlign("left")}
+                      className={`px-3 py-1 rounded ${
+                        textAlign === "left" ? "bg-primary text-primary-content" : "bg-base-200"
+                      }`}
+                    >
+                      <AlignLeft size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTextAlign("center")}
+                      className={`px-3 py-1 rounded ${
+                        textAlign === "center" ? "bg-primary text-primary-content" : "bg-base-200"
+                      }`}
+                    >
+                      <AlignCenter size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTextAlign("right")}
+                      className={`px-3 py-1 rounded ${
+                        textAlign === "right" ? "bg-primary text-primary-content" : "bg-base-200"
+                      }`}
+                    >
+                      <AlignRight size={16} />
                     </button>
                   </div>
                 </div>
@@ -361,17 +454,10 @@ const StatusCreateModal = ({ isOpen, onClose }) => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isCreatingStatus || (statusType === "text" && !text.trim()) || (statusType === "image" && !selectedImage)}
+              disabled={isCreatingStatus}
               className="btn btn-primary w-full"
             >
-              {isCreatingStatus ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Posting...
-                </>
-              ) : (
-                "Post Status"
-              )}
+              {isCreatingStatus ? "Creating..." : "Post Status"}
             </button>
           </form>
         </div>

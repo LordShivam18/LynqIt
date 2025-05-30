@@ -1276,3 +1276,89 @@ export const sendGroupMessage = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+// Forward message to another user or group
+export const forwardMessage = async (req, res) => {
+  try {
+    const { messageId, targetId, targetType } = req.body;
+    const userId = req.user._id;
+
+    if (!messageId || !targetId || !targetType) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Verify the target exists
+    if (targetType === 'user') {
+      const targetUser = await User.findById(targetId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "Target user not found" });
+      }
+    } else if (targetType === 'group') {
+      const targetGroup = await Group.findById(targetId);
+      if (!targetGroup) {
+        return res.status(404).json({ error: "Target group not found" });
+      }
+
+      // Check if user is a member of the group
+      const isMember = targetGroup.members.some(m => m.user.toString() === userId.toString());
+      if (!isMember) {
+        return res.status(403).json({ error: "You are not a member of this group" });
+      }
+    } else {
+      return res.status(400).json({ error: "Invalid target type" });
+    }
+
+    // Get the original message
+    const originalMessage = await Message.findById(messageId);
+    if (!originalMessage) {
+      return res.status(404).json({ error: "Original message not found" });
+    }
+
+    // Create a new message based on the original
+    const newMessage = new Message({
+      senderId: userId,
+      ...(targetType === 'user' ? { receiverId: targetId, messageType: 'direct' } : 
+                                { groupId: targetId, messageType: 'group' }),
+      text: originalMessage.text,
+      image: originalMessage.image,
+      mediaType: originalMessage.mediaType,
+      status: 'sent',
+      isForwarded: true,
+      originalMessageId: messageId
+    });
+
+    // Save the new message
+    await newMessage.save();
+
+    // If it's a group message, add read receipts for all members
+    if (targetType === 'group') {
+      const group = await Group.findById(targetId);
+      const readReceipts = group.members
+        .filter(member => member.user.toString() !== userId.toString())
+        .map(member => ({
+          userId: member.user,
+          status: 'sent'
+        }));
+
+      // Add the read receipts
+      newMessage.groupReadReceipts = readReceipts;
+      await newMessage.save();
+    }
+
+    // Emit socket event for real-time update
+    if (targetType === 'user') {
+      const recipientSocketId = getReceiverSocketId(targetId);
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("newMessage", { message: newMessage });
+      }
+    } else {
+      // Emit to group room
+      io.to(`group_${targetId}`).emit("newGroupMessage", { message: newMessage });
+    }
+
+    res.status(200).json(newMessage);
+  } catch (error) {
+    console.error("Error forwarding message:", error);
+    res.status(500).json({ error: "Failed to forward message" });
+  }
+};

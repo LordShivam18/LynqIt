@@ -24,7 +24,8 @@
     "nodemailer": "^7.0.3",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
-    "speakeasy": "^2.0.0"
+    "speakeasy": "^2.0.0",
+    "ua-parser-js": "^2.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

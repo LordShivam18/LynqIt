@@ -35,6 +35,15 @@ const statusSchema = new mongoose.Schema(
       enum: ["normal", "bold", "italic", "bold-italic"],
       default: "normal"
     },
+    fontFamily: {
+      type: String,
+      default: "sans-serif"
+    },
+    textAlign: {
+      type: String,
+      enum: ["left", "center", "right"],
+      default: "center"
+    },
     // For image status
     image: {
       type: String, // Cloudinary URL

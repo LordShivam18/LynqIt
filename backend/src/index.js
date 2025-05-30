@@ -17,11 +17,6 @@ import userRoutes from "./routes/user.route.js";
 import statusRoutes from "./routes/status.route.js";
 import { app, server } from "./lib/socket.js";
 
-// Security middleware
-import {
-  sanitizeInput
-} from "./middleware/security.middleware.js";
-
 dotenv.config();
 
 const PORT = process.env.PORT || 5001;
@@ -32,9 +27,6 @@ const __dirname = path.dirname(__filename);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
-
-// Only keep input sanitization for basic security
-app.use(sanitizeInput);
 
 // Function to get allowed origins based on environment
 const getAllowedOrigins = () => {

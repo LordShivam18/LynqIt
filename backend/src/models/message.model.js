@@ -170,6 +170,16 @@ const messageSchema = new mongoose.Schema(
         encryptionKeyVersion: {
             type: Number,
             default: 1
+        },
+        // Forwarded message fields
+        isForwarded: {
+            type: Boolean,
+            default: false
+        },
+        originalMessageId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message",
+            default: null
         }
     },
     { timestamps: true }

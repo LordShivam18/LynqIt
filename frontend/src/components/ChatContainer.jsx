@@ -8,9 +8,10 @@ import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime, groupMessagesByDate, formatStatusTime } from "../utils/dateUtils";
 import DateSeparator from "./DateSeparator";
-import { X, FileText, Film, Smile, Check, Info, Trash2, MoreVertical, AlertCircle, AlertTriangle, RefreshCw, Edit, Hash, AtSign, Reply, Flag } from "lucide-react";
+import { X, FileText, Film, Smile, Check, Info, Trash2, MoreVertical, AlertCircle, AlertTriangle, RefreshCw, Edit, Hash, AtSign, Reply, Flag, Send } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import EditMessageModal from "./EditMessageModal";
+import ForwardMessageModal from "./ForwardMessageModal";
 import ReplyMessage from "./ReplyMessage";
 import ReportMessageButton from "./ReportMessageButton";
 import MessageStatusIndicator from "./MessageStatusIndicator";
@@ -56,6 +57,8 @@ const ChatContainer = () => {
   const contextMenuRef = useRef(null);
   const [showMessageOptions, setShowMessageOptions] = useState(null);
   const [timeFormatKey, setTimeFormatKey] = useState(0); // Force re-render when time format changes
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [messageToForward, setMessageToForward] = useState(null);
   // Encryption and decryption removed - all messages are plain text
 
   // Common reaction emojis for quick access
@@ -308,6 +311,8 @@ const ChatContainer = () => {
 
   // Handle reply to message
   const handleReplyToMessage = (message) => {
+    setReplyingTo(message);
+    setShowContextMenu(null);
     // Ensure we have proper sender information for the reply preview
     const enhancedMessage = { ...message };
 
@@ -346,6 +351,14 @@ const ChatContainer = () => {
     }
 
     setReplyingTo(enhancedMessage);
+    setShowContextMenu(null);
+    setShowMessageOptions(null);
+  };
+
+  // Handle forward message
+  const handleForwardMessage = (message) => {
+    setMessageToForward(message);
+    setShowForwardModal(true);
     setShowContextMenu(null);
     setShowMessageOptions(null);
   };
@@ -652,6 +665,13 @@ const ChatContainer = () => {
                         </li>
 
                         <li>
+                          <button onClick={() => handleForwardMessage(message)}>
+                            <Send size={14} />
+                            <span>Forward</span>
+                          </button>
+                        </li>
+
+                        <li>
                           <button onClick={() => handleMessageInfo(message)}>
                             <Info size={14} />
                             <span>Info</span>
@@ -689,6 +709,18 @@ const ChatContainer = () => {
                     replyTo={message.replyTo}
                     onClick={() => scrollToMessage(message.replyTo._id)}
                   />
+                )}
+
+                {/* Show forwarded tag for forwarded messages */}
+                {message.isForwarded && (
+                  <div className="text-xs opacity-60 flex items-center gap-1 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m13 9 2 2-2 2"/>
+                      <path d="M5 5v14"/>
+                      <path d="M9 9h8"/>
+                    </svg>
+                    <span>Forwarded</span>
+                  </div>
                 )}
 
                 {message.image && renderMediaContent(message)}
@@ -932,6 +964,18 @@ const ChatContainer = () => {
         />
       )}
 
+      {/* Forward Message Modal */}
+      {showForwardModal && messageToForward && (
+        <ForwardMessageModal
+          isOpen={showForwardModal}
+          onClose={() => {
+            setShowForwardModal(false);
+            setMessageToForward(null);
+          }}
+          messageId={messageToForward._id}
+        />
+      )}
+
       {/* Right-click Context Menu */}
       {showContextMenu && selectedMessage && (
         <div
@@ -948,6 +992,13 @@ const ChatContainer = () => {
               <button onClick={() => handleReplyToMessage(selectedMessage)}>
                 <Reply size={14} />
                 <span>Reply</span>
+              </button>
+            </li>
+
+            <li>
+              <button onClick={() => handleForwardMessage(selectedMessage)}>
+                <Send size={14} />
+                <span>Forward</span>
               </button>
             </li>
 
