@@ -2,7 +2,6 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import helmet from "helmet";
 import fs from "fs";
 
 import path from "path";
@@ -20,9 +19,7 @@ import { app, server } from "./lib/socket.js";
 
 // Security middleware
 import {
-  securityHeaders,
-  sanitizeInput,
-  generateCSRFToken
+  sanitizeInput
 } from "./middleware/security.middleware.js";
 
 dotenv.config();
@@ -31,19 +28,13 @@ const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Basic middleware (must come before security middleware that uses cookies)
+// Basic middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: false, // We'll handle this manually
-  crossOriginEmbedderPolicy: false
-}));
-app.use(securityHeaders);
+// Only keep input sanitization for basic security
 app.use(sanitizeInput);
-app.use(generateCSRFToken);
 
 // Function to get allowed origins based on environment
 const getAllowedOrigins = () => {
@@ -88,8 +79,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
-  exposedHeaders: ['X-CSRF-Token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 200 // For legacy browser support
 };
 
