@@ -112,49 +112,6 @@ LynqIt/
 └── README.md                  # Project documentation
 ```
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB
-- Cloudinary account (for media storage)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/LynqIt.git
-   cd LynqIt
-   ```
-
-2. **Install dependencies**
-   ```bash
-   # Install backend dependencies
-   cd backend
-   npm install
-
-   # Install frontend dependencies
-   cd ../frontend
-   npm install
-   ```
-
-3. **Set up environment variables**
-   - Create `.env` files in both backend and frontend directories
-   - See `.env.example` for required variables
-
-4. **Start the development servers**
-   ```bash
-   # Start backend (from backend directory)
-   npm run dev
-
-   # Start frontend (from frontend directory)
-   npm run dev
-   ```
-
-5. **Access the application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:5001
-
 ## 🌐 API Endpoints
 
 ### **Authentication**
