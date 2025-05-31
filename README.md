@@ -1,6 +1,6 @@
 # LynqIt Chat Application
 
-A comprehensive real-time chat application built with React, Socket.IO, and Node.js. LynqIt provides a WhatsApp-like experience with advanced features including personal and group messaging, status updates, media sharing, and more.
+A comprehensive real-time chat application built with React, Socket.IO, and Node.js. LynqIt provides an experience full of advanced features including personal and group messaging, status updates, media sharing, and more.
 
 ## 🚀 Key Features
 
@@ -23,7 +23,7 @@ A comprehensive real-time chat application built with React, Socket.IO, and Node
 - **Group invite links** with expiration
 - **Group notifications** and mention tracking
 
-### 📱 **Status Updates (WhatsApp-style)**
+### 📱 **Status Updates**
 - **Text and image status** posts with 24-hour auto-expiry
 - **Status privacy controls**: Contacts, contacts except, only share with
 - **Status reactions** and replies
