@@ -10,6 +10,7 @@ import GroupSettingsModal from "./GroupSettingsModal";
 import BlockUserButton from "./BlockUserButton";
 import PinButton from "./PinButton";
 import { axiosInstance } from "../lib/axios";
+import { useNavigate } from "react-router-dom";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser, getLastSeen, userStatuses, messages } = useChatStore();
@@ -44,6 +45,7 @@ const ChatHeader = () => {
   const [commonGroups, setCommonGroups] = useState([]);
   const [isPinned, setIsPinned] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const navigate = useNavigate();
 
   // Determine if we're in group or direct chat mode
   const isGroupChat = !!selectedGroup;
@@ -1208,8 +1210,12 @@ const ChatHeader = () => {
                         description: description || ''
                       });
 
-                      toast.success(response.data.message);
-                      setIsBlocked(true); // Update UI to show user is blocked
+                      // Navigate to the thanks page instead of showing a toast
+                      navigate('/report-thanks', { 
+                        state: { 
+                          reportedUser: selectedUser
+                        } 
+                      });
                     } catch (error) {
                       console.error('Error reporting user:', error);
                       toast.error(error.response?.data?.error || 'Failed to report user');

@@ -25,7 +25,7 @@ const io = new Server(server, {
   },
   // Optimized settings for real-time performance
   pingTimeout: 30000,        // Reduced from 60s to 30s for faster detection
-  pingInterval: 10000,       // Ping every 10 seconds
+  pingInterval: 5000,        // Ping every 5 seconds for more frequent health checks
   upgradeTimeout: 10000,     // Faster upgrade timeout
   allowEIO3: true,           // Allow Engine.IO v3 clients
   transports: ['websocket', 'polling'], // Prefer websocket, fallback to polling
@@ -33,22 +33,23 @@ const io = new Server(server, {
   perMessageDeflate: false,  // Disable compression for lower latency
   httpCompression: false,    // Disable HTTP compression for real-time
   maxHttpBufferSize: 1e6,    // 1MB max buffer size
-  connectTimeout: 5000       // 5 second connection timeout
+  connectTimeout: 5000,      // 5 second connection timeout
+  path: '/socket.io'         // Explicit path for socket.io
 });
 
-export function getReceiverSocketId(userId) {
-  return userSocketMap[userId];
-}
+// used to store online users - making the map as global variable to ensure consistent access
+global.userSocketMap = {}; // {userId: socketId}
 
-// used to store online users
-const userSocketMap = {}; // {userId: socketId}
+export function getReceiverSocketId(userId) {
+  return global.userSocketMap[userId];
+}
 
 io.on("connection", async (socket) => {
   console.log("A user connected", socket.id);
 
   const userId = socket.handshake.query.userId;
   if (userId) {
-    userSocketMap[userId] = socket.id;
+    global.userSocketMap[userId] = socket.id;
 
     // Update user status to online
     try {
@@ -67,13 +68,13 @@ io.on("connection", async (socket) => {
       // Send unread message counts to the user
       const unreadCounts = await getUnreadCountsForUser(userId);
       socket.emit("unreadCountUpdate", unreadCounts);
+      
+      // Send current online users to all clients
+      io.emit("getOnlineUsers", Object.keys(global.userSocketMap));
     } catch (error) {
       console.error("Error updating user online status:", error);
     }
   }
-
-  // io.emit() is used to send events to all the connected clients
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // Handle client requesting to refresh sidebar
   socket.on("requestChatUpdate", async () => {
@@ -122,7 +123,7 @@ io.on("connection", async (socket) => {
 
         // Notify each sender
         Object.entries(messagesBySender).forEach(([senderId, msgIds]) => {
-          const senderSocketId = userSocketMap[senderId];
+          const senderSocketId = global.userSocketMap[senderId];
           if (senderSocketId) {
             io.to(senderSocketId).emit("messageStatusUpdate", {
               messageIds: msgIds,
@@ -158,7 +159,7 @@ io.on("connection", async (socket) => {
         const reader = await User.findById(userId).select('fullName username profilePic');
 
         senderIds.forEach(senderId => {
-          const senderSocketId = userSocketMap[senderId];
+          const senderSocketId = global.userSocketMap[senderId];
           if (senderSocketId) {
             const senderMessages = groupMessages
               .filter(msg => msg.senderId.toString() === senderId)
@@ -214,7 +215,7 @@ io.on("connection", async (socket) => {
 
         // Notify each sender
         Object.entries(messagesBySender).forEach(([senderId, msgIds]) => {
-          const senderSocketId = userSocketMap[senderId];
+          const senderSocketId = global.userSocketMap[senderId];
           if (senderSocketId) {
             io.to(senderSocketId).emit("messageStatusUpdate", {
               messageIds: msgIds,
@@ -254,7 +255,7 @@ io.on("connection", async (socket) => {
 
         // Get updated unread counts and emit to user
         const unreadCounts = await getUnreadCountsForUser(userId);
-        const userSocketId = userSocketMap[userId];
+        const userSocketId = global.userSocketMap[userId];
         if (userSocketId) {
           io.to(userSocketId).emit("unreadCountUpdate", unreadCounts);
         }
@@ -285,7 +286,7 @@ io.on("connection", async (socket) => {
         const reader = await User.findById(userId).select('fullName username profilePic');
 
         senderIds.forEach(senderId => {
-          const senderSocketId = userSocketMap[senderId];
+          const senderSocketId = global.userSocketMap[senderId];
           if (senderSocketId) {
             const senderMessages = groupMessages
               .filter(msg => msg.senderId.toString() === senderId)
@@ -308,7 +309,7 @@ io.on("connection", async (socket) => {
           if (group) {
             group.members.forEach(member => {
               if (member.user.toString() !== userId.toString()) {
-                const memberSocketId = userSocketMap[member.user.toString()];
+                const memberSocketId = global.userSocketMap[member.user.toString()];
                 if (memberSocketId) {
                   io.to(memberSocketId).emit("groupReadReceiptUpdate", {
                     groupId,
@@ -352,7 +353,7 @@ io.on("connection", async (socket) => {
 
         // Get updated unread counts and emit to user
         const unreadCounts = await getUnreadCountsForUser(userId);
-        const userSocketId = userSocketMap[userId];
+        const userSocketId = global.userSocketMap[userId];
         if (userSocketId) {
           io.to(userSocketId).emit("unreadCountUpdate", unreadCounts);
         }
@@ -413,7 +414,7 @@ io.on("connection", async (socket) => {
           const group = await Group.findById(message.groupId);
           if (group) {
             group.members.forEach(member => {
-              const memberSocketId = userSocketMap[member.user.toString()];
+              const memberSocketId = global.userSocketMap[member.user.toString()];
               if (memberSocketId) {
                 io.to(memberSocketId).emit("messageDeleted", {
                   messageId,
@@ -429,7 +430,7 @@ io.on("connection", async (socket) => {
             ? message.receiverId.toString()
             : message.senderId.toString();
 
-          const receiverSocketId = userSocketMap[otherUserId];
+          const receiverSocketId = global.userSocketMap[otherUserId];
           if (receiverSocketId) {
             io.to(receiverSocketId).emit("messageDeleted", {
               messageId,
@@ -521,7 +522,7 @@ io.on("connection", async (socket) => {
         const group = await Group.findById(message.groupId);
         if (group) {
           group.members.forEach(member => {
-            const memberSocketId = userSocketMap[member.user.toString()];
+            const memberSocketId = global.userSocketMap[member.user.toString()];
             if (memberSocketId) {
               io.to(memberSocketId).emit("messageEdited", updatedMessage);
             }
@@ -529,7 +530,7 @@ io.on("connection", async (socket) => {
         }
       } else {
         // Notify the recipient about the edit (direct message)
-        const receiverSocketId = userSocketMap[message.receiverId.toString()];
+        const receiverSocketId = global.userSocketMap[message.receiverId.toString()];
         if (receiverSocketId) {
           io.to(receiverSocketId).emit("messageEdited", updatedMessage);
         }
@@ -602,7 +603,7 @@ io.on("connection", async (socket) => {
         const group = await Group.findById(groupId);
         if (group) {
           group.members.forEach(member => {
-            const memberSocketId = userSocketMap[member.user.toString()];
+            const memberSocketId = global.userSocketMap[member.user.toString()];
             if (memberSocketId) {
               io.to(memberSocketId).emit("newGroupMessage", {
                 message: savedReply,
@@ -613,7 +614,7 @@ io.on("connection", async (socket) => {
         }
       } else {
         // Direct message reply
-        const receiverSocketId = userSocketMap[receiverId];
+        const receiverSocketId = global.userSocketMap[receiverId];
         if (receiverSocketId) {
           io.to(receiverSocketId).emit("newMessage", savedReply);
         }
@@ -628,7 +629,7 @@ io.on("connection", async (socket) => {
   // Handle mention notifications
   socket.on("mentionNotification", ({ mentionedUserIds, messageId, groupId, senderName }) => {
     mentionedUserIds.forEach(mentionedUserId => {
-      const mentionedUserSocketId = userSocketMap[mentionedUserId];
+      const mentionedUserSocketId = global.userSocketMap[mentionedUserId];
       if (mentionedUserSocketId) {
         io.to(mentionedUserSocketId).emit("userMentioned", {
           messageId,
@@ -691,7 +692,7 @@ io.on("connection", async (socket) => {
       });
 
       // Emit to receiver if online
-      const receiverSocketId = userSocketMap[receiverId];
+      const receiverSocketId = global.userSocketMap[receiverId];
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("newMessage", newMessage);
 
@@ -807,7 +808,7 @@ io.on("connection", async (socket) => {
         const { handleMentionNotification } = await import('../controllers/unreadCounter.controller.js');
 
         mentions.forEach(async (mention) => {
-          const mentionedUserSocketId = userSocketMap[mention.user];
+          const mentionedUserSocketId = global.userSocketMap[mention.user];
           if (mentionedUserSocketId) {
             // Send real-time mention notification
             io.to(mentionedUserSocketId).emit("userMentioned", {
@@ -833,7 +834,7 @@ io.on("connection", async (socket) => {
       // Emit to all group members and update unread counts
       const groupMembers = group.members.map(member => member.user.toString());
       groupMembers.forEach(async (memberId) => {
-        const memberSocketId = userSocketMap[memberId];
+        const memberSocketId = global.userSocketMap[memberId];
         if (memberSocketId) {
           io.to(memberSocketId).emit("newGroupMessage", {
             message: newMessage,
@@ -875,7 +876,7 @@ io.on("connection", async (socket) => {
     console.log("A user disconnected", socket.id);
 
     if (userId) {
-      delete userSocketMap[userId];
+      delete global.userSocketMap[userId];
 
       // Update user status to offline with last seen timestamp
       try {
@@ -895,7 +896,7 @@ io.on("connection", async (socket) => {
       }
     }
 
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    io.emit("getOnlineUsers", Object.keys(global.userSocketMap));
   });
 });
 

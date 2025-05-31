@@ -148,8 +148,12 @@ export const useAuthStore = create((set, get) => ({
       });
       toast.success("Logged out successfully");
       get().disconnectSocket();
+      return true; // Return success status
     } catch (error) {
-      toast.error(error.response.data.message);
+      const errorMessage = error.response?.data?.message || "Failed to logout";
+      toast.error(errorMessage);
+      console.error("Logout error:", error);
+      throw error; // Rethrow the error to be caught by the caller
     }
   },
 
@@ -192,8 +196,14 @@ export const useAuthStore = create((set, get) => ({
       get().socket.disconnect();
     }
 
+    // Determine the appropriate socket URL based on environment
+    const isProduction = import.meta.env.MODE === "production";
+    const socketURL = isProduction ? "/" : BASE_URL;
+    
+    console.log(`🔌 Connecting to Socket.IO server at: ${socketURL}`);
+
     // Create new socket with optimized real-time settings
-    const socket = io(BASE_URL, {
+    const socket = io(socketURL, {
       query: {
         userId: authUser._id,
       },
@@ -213,6 +223,9 @@ export const useAuthStore = create((set, get) => ({
       // Performance settings
       autoConnect: true,               // Auto connect on creation
       multiplex: true,                 // Allow multiplexing
+      
+      // Explicit path
+      path: '/socket.io'
     });
 
     set({ socket: socket });
@@ -226,6 +239,15 @@ export const useAuthStore = create((set, get) => ({
       // Get initial online users and request statuses
       socket.emit("getOnlineUsers");
       socket.emit("getUserStatuses");
+      
+      // Set up a heartbeat to keep connection alive
+      const heartbeatInterval = setInterval(() => {
+        if (socket.connected) {
+          socket.emit("heartbeat");
+        } else {
+          clearInterval(heartbeatInterval);
+        }
+      }, 30000); // Send heartbeat every 30 seconds
     });
 
     socket.on("connect_error", (error) => {
@@ -244,6 +266,7 @@ export const useAuthStore = create((set, get) => ({
 
     // Event listeners
     socket.on("getOnlineUsers", (userIds) => {
+      console.log("📊 Received online users:", userIds.length);
       set({ onlineUsers: userIds });
     });
 

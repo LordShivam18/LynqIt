@@ -330,23 +330,40 @@ export const useGroupStore = create((set, get) => ({
       const currentSelectedGroup = get().selectedGroup;
       const currentUserId = useAuthStore.getState().authUser._id;
 
+      // Play notification sound for new group messages
+      try {
+        // Only play notification if the message is from someone else
+        if (message.senderId && 
+            (typeof message.senderId === 'object' ? message.senderId._id !== currentUserId : message.senderId !== currentUserId)) {
+          const notificationSound = new Audio('/sounds/message.mp3');
+          notificationSound.volume = 0.5;
+          notificationSound.play().catch(e => console.log("Audio play error:", e));
+        }
+      } catch (error) {
+        console.error("Error playing group notification sound:", error);
+      }
+
       // If this is the selected group, add message to current messages
       if (currentSelectedGroup && currentSelectedGroup._id === groupId) {
+        console.log("✅ Adding message to current group conversation");
+        
         set(state => ({
           groupMessages: [...state.groupMessages.filter(m => m._id !== message._id), message]
         }));
 
         // If we're not the sender, mark as seen after a delay and clear unread/mention badges
-        if (message.senderId !== currentUserId) {
+        if ((typeof message.senderId === 'object' ? message.senderId._id !== currentUserId : message.senderId !== currentUserId)) {
           setTimeout(async () => {
             // Mark as seen via socket
             const socket = useAuthStore.getState().socket;
             if (socket) {
               socket.emit("messageSeen", { messageIds: [message._id] });
+              console.log("✓ Emitted messageSeen for group message:", message._id);
             }
 
             // Mark chat as read to clear unread badges
             try {
+              console.log("📨 Marking group chat as read:", groupId);
               await useChatStore.getState().markChatAsRead('group', groupId);
 
               // If this message has mentions, mark them as read too
@@ -371,14 +388,45 @@ export const useGroupStore = create((set, get) => ({
         }
       } else {
         // If we're not viewing this group and we're not the sender,
-        // the backend will handle unread count increment and emit unreadCountUpdate event
-        if (message.senderId !== currentUserId) {
-          // Check if we're mentioned in the message
-          const isMentioned = message.mentions && message.mentions.some(mention => mention.user === currentUserId);
-
-          if (isMentioned) {
-            // Show mention notification
-            toast.info(`You were mentioned in ${get().groups.find(g => g._id === groupId)?.name || 'a group'}`);
+        // Show a notification toast
+        const messageSenderId = typeof message.senderId === 'object' ? message.senderId._id : message.senderId;
+        if (messageSenderId !== currentUserId) {
+          try {
+            // Find the group name
+            const group = get().groups.find(g => g._id === groupId);
+            const groupName = group ? group.name : 'Group chat';
+            
+            // Find the sender's name
+            const senderName = typeof message.senderId === 'object' 
+              ? (message.senderId.fullName || message.senderId.username) 
+              : 'Someone';
+              
+            // Create message preview
+            const messagePreview = message.text 
+              ? (message.text.length > 30 ? `${message.text.slice(0, 30)}...` : message.text)
+              : (message.image ? 'Sent an image' : 'New message');
+              
+            // Check if the user is mentioned
+            const isMentioned = message.mentions && message.mentions.some(mention => 
+              (typeof mention.user === 'object' ? mention.user._id : mention.user) === currentUserId);
+            
+            // Show appropriate toast with different styling if mentioned
+            if (isMentioned) {
+              toast.success(`${senderName} mentioned you in ${groupName}`, {
+                duration: 5000,
+                position: 'top-right',
+                icon: '🔔',
+                style: { background: '#FEF3C7', color: '#92400E' }
+              });
+            } else {
+              toast.success(`${groupName}: ${senderName} - ${messagePreview}`, {
+                duration: 4000,
+                position: 'top-right',
+                icon: '👥'
+              });
+            }
+          } catch (error) {
+            console.error("Error showing group message notification:", error);
           }
         }
       }

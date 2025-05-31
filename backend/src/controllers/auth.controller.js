@@ -580,80 +580,54 @@ export const forgotPassword = async (req, res) => {
         // Send password reset email
         await sendPasswordResetEmail(email, otp);
 
-        // Return success response (don't include OTP in response)
+        // Return success response with 2FA info
         res.status(200).json({
             message: "Password reset code sent successfully",
-            email
+            email,
+            has2FA: user.twoFactorEnabled // Include 2FA status in response
         });
     } catch (error) {
-        console.error("Error in forgotPassword controller:", error);
-
-        // Provide more specific error messages based on the error type
-        if (error.message === 'Email service configuration error') {
-            return res.status(500).json({
-                message: "Email service is currently unavailable. Please try again later.",
-                error: "email_service_error"
-            });
-        }
-
-        // Handle nodemailer specific errors
-        if (error.code === 'EAUTH') {
-            return res.status(500).json({
-                message: "Email authentication failed. Please contact support.",
-                error: "email_auth_error"
-            });
-        }
-
-        if (error.code === 'ESOCKET' || error.code === 'ECONNECTION') {
-            return res.status(500).json({
-                message: "Could not connect to email server. Please try again later.",
-                error: "email_connection_error"
-            });
-        }
-
-        res.status(500).json({ message: "Internal Server Error" });
+        console.error("Forgot password error:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };
 
 /**
- * Verify OTP and reset password
+ * Reset password with OTP verification
  * @route POST /api/auth/reset-password
  */
 export const resetPassword = async (req, res) => {
     try {
-        const { email, otp, newPassword } = req.body;
+        const { email, otp, newPassword, skipOtp } = req.body;
 
-        if (!email || !otp || !newPassword) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
-
-        // Import required functions
-        const { verifyOTP, deleteOTPs } = await import("../lib/otp.js");
-        const { sendPasswordResetConfirmationEmail } = await import("../lib/email.js");
-
-        // Verify OTP
-        const isValid = await verifyOTP(email, otp);
-
-        if (!isValid) {
-            return res.status(400).json({ message: "Invalid or expired verification code" });
-        }
-
-        // Find the user
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(404).json({ message: "No account found with this email address" });
-        }
-
-        // Password strength validation
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{8,}$/;
-        if (!passwordRegex.test(newPassword)) {
+        if (!email || !newPassword || (!otp && !skipOtp)) {
             return res.status(400).json({
-                message: "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character"
+                message: "Email, verification code, and new password are required"
             });
         }
 
-        // Hash new password
+        // Find user by email
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "No account found with this email address"
+            });
+        }
+
+        // Verify OTP if not skipping (2FA verified case)
+        if (!skipOtp) {
+            const { verifyOTP } = await import("../lib/otp.js");
+            const isOTPValid = await verifyOTP(email, otp);
+
+            if (!isOTPValid) {
+            return res.status(400).json({
+                    message: "Invalid or expired verification code"
+            });
+            }
+        }
+
+        // Hash the new password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
@@ -661,19 +635,10 @@ export const resetPassword = async (req, res) => {
         user.password = hashedPassword;
         await user.save();
 
-        // Delete all OTPs for this email
-        await deleteOTPs(email);
-
-        // Send password reset confirmation email
-        try {
-            await sendPasswordResetConfirmationEmail(email, user.fullName);
-            console.log(`Password reset confirmation email sent to: ${email}`);
-        } catch (emailError) {
-            // Log the error but don't fail the password reset process
-            console.error("Error sending password reset confirmation email:", emailError);
-        }
-
-        res.status(200).json({ message: "Password reset successful" });
+        // Return success response
+        res.status(200).json({
+            message: "Password reset successfully"
+        });
     } catch (error) {
         console.error("Error in resetPassword controller:", error);
         res.status(500).json({ message: "Internal Server Error" });

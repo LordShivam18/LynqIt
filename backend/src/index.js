@@ -15,6 +15,7 @@ import groupRoutes from "./routes/group.route.js";
 import twofaRoutes from "./routes/twofa.route.js";
 import userRoutes from "./routes/user.route.js";
 import statusRoutes from "./routes/status.route.js";
+import supportRoutes from "./routes/support.route.js";
 import { app, server } from "./lib/socket.js";
 
 dotenv.config();
@@ -91,6 +92,7 @@ app.use("/api/groups", groupRoutes);
 app.use("/api/2fa", twofaRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/status", statusRoutes);
+app.use("/api/support", supportRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -152,6 +154,7 @@ app.use((err, req, res, next) => {
 server.listen(PORT, () => {
   console.log(`Server is running on PORT: ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`Socket.IO: Configured with path: /socket.io`);
   console.log(`Allowed Origins:`, getAllowedOrigins());
   connectDB();
 });

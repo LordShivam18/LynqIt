@@ -8,9 +8,10 @@ import BlockedUsersModal from "../components/BlockedUsersModal";
 import {
   ArrowLeft, Send, User, Lock, MessageSquare, Bell, Palette,
   HelpCircle, ChevronRight, Eye, EyeOff, Clock, ShieldAlert, LinkIcon,
-  Users, Ban, Smartphone, Volume, Volume2, VolumeX, Trash2, LogOut, UserX, Sun, Moon, Shield
+  Users, Ban, Smartphone, Volume, Volume2, VolumeX, Trash2, LogOut, UserX, Sun, Moon, Shield, Check, Info
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 const PREVIEW_MESSAGES = [
   { id: 1, content: "Hey! How's it going?", isSent: false },
@@ -87,9 +88,17 @@ const SettingsPage = () => {
   };
 
   const handleLogout = async () => {
+    try {
     await logout();
-    // Redirect to login page after logout
+      // Add a small delay to ensure the logout request completes
+      setTimeout(() => {
     window.location.href = "/login";
+      }, 100);
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Redirect anyway if there's an error
+      window.location.href = "/login";
+    }
   };
 
   // Render the tab content based on the active tab
@@ -959,16 +968,206 @@ const ThemeSettings = ({ theme, setTheme }) => {
 };
 
 // Placeholder for Help Settings
-const HelpSettings = () => (
+const HelpSettings = () => {
+  const [formData, setFormData] = useState({
+    category: '',
+    subject: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError('');
+    
+    try {
+      const response = await axios.post('/api/support/submit', formData);
+      if (response.data.success) {
+        setSubmitSuccess(true);
+        setFormData({
+          category: '',
+          subject: '',
+          message: ''
+        });
+      }
+    } catch (error) {
+      console.error('Support request submission failed:', error);
+      setSubmitError(error.response?.data?.message || 'Failed to submit your request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
   <div className="space-y-6">
-    <div className="bg-base-200 p-12 rounded-xl flex flex-col items-center justify-center">
-      <HelpCircle size={48} className="text-base-content/30 mb-4" />
-      <h3 className="text-lg font-medium">Help & Support</h3>
-      <p className="text-center text-base-content/60 mt-2">
-        Help and support options will be implemented in future updates
+      <div className="flex flex-col gap-1 mb-6">
+        <h2 className="text-lg font-semibold">Help & Support</h2>
+        <p className="text-sm text-base-content/70">
+          Need help or have a grievance? Fill out the form below and our support team will assist you.
       </p>
     </div>
+
+      {submitSuccess ? (
+        <div className="bg-success/10 border border-success/30 rounded-lg p-6 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="bg-success/20 p-3 rounded-full">
+              <Check size={24} className="text-success" />
+            </div>
+          </div>
+          <h3 className="text-lg font-medium mb-2">Support Request Submitted</h3>
+          <p className="text-base-content/70 mb-4">
+            Thank you for reaching out. Our team will review your request and get back to you as soon as possible.
+          </p>
+          <button 
+            className="btn btn-sm btn-ghost"
+            onClick={() => setSubmitSuccess(false)}
+          >
+            Submit Another Request
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4 bg-base-200 p-6 rounded-xl">
+          {submitError && (
+            <div className="alert alert-error">
+              <Info size={16} />
+              <span>{submitError}</span>
+            </div>
+          )}
+          
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">Category <span className="text-error">*</span></span>
+            </label>
+            <select 
+              name="category" 
+              value={formData.category}
+              onChange={handleChange}
+              className="select select-bordered w-full"
+              required
+            >
+              <option value="" disabled>Select a category</option>
+              <option value="Technical Issue">Technical Issue</option>
+              <option value="Account Problem">Account Problem</option>
+              <option value="Feature Request">Feature Request</option>
+              <option value="Billing Issue">Billing Issue</option>
+              <option value="Security Concern">Security Concern</option>
+              <option value="Grievance">Grievance</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">Subject <span className="text-error">*</span></span>
+            </label>
+            <input
+              type="text"
+              name="subject"
+              value={formData.subject}
+              onChange={handleChange}
+              className="input input-bordered w-full"
+              placeholder="Brief description of the issue"
+              required
+            />
+          </div>
+          
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">Message <span className="text-error">*</span></span>
+            </label>
+            <textarea
+              name="message"
+              value={formData.message}
+              onChange={handleChange}
+              className="textarea textarea-bordered h-32"
+              placeholder="Please provide details about your issue or request"
+              required
+            ></textarea>
+          </div>
+          
+          <div className="text-xs text-base-content/60 mt-2">
+            <p>All support requests are sent from <span className="font-medium">lynqit.official@gmail.com</span> to our support team.</p>
+          </div>
+          
+          <div className="form-control mt-6">
+            <button 
+              type="submit" 
+              className="btn btn-primary" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Submitting...
+                </>
+              ) : (
+                'Submit Request'
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+      
+      <div className="divider">OR</div>
+      
+      <div className="bg-base-200 p-6 rounded-xl">
+        <h3 className="text-lg font-medium mb-4">Frequently Asked Questions</h3>
+        
+        <div className="space-y-4">
+          <div className="collapse collapse-arrow bg-base-100">
+            <input type="radio" name="faq-accordion" defaultChecked /> 
+            <div className="collapse-title font-medium">
+              How do I change my password?
+            </div>
+            <div className="collapse-content text-base-content/70">
+              <p>You can change your password by going to Settings {'>'}  Account {'>'} Change Password. You will need to enter your current password and then your new password.</p>
+            </div>
+          </div>
+          
+          <div className="collapse collapse-arrow bg-base-100">
+            <input type="radio" name="faq-accordion" /> 
+            <div className="collapse-title font-medium">
+              How do I delete my account?
+            </div>
+            <div className="collapse-content text-base-content/70">
+              <p>To delete your account, go to Settings {'>'} Account {'>'} Delete Account. Note that this action is permanent and cannot be undone.</p>
+            </div>
+          </div>
+          
+          <div className="collapse collapse-arrow bg-base-100">
+            <input type="radio" name="faq-accordion" /> 
+            <div className="collapse-title font-medium">
+              Can I change my username?
+            </div>
+            <div className="collapse-content text-base-content/70">
+              <p>Yes, you can change your username in Settings {'>'} Account {'>'} Edit Profile. Your username must be unique and not already taken by another user.</p>
+            </div>
+          </div>
+          
+          <div className="collapse collapse-arrow bg-base-100">
+            <input type="radio" name="faq-accordion" /> 
+            <div className="collapse-title font-medium">
+              How do I report a bug?
+            </div>
+            <div className="collapse-content text-base-content/70">
+              <p>You can report bugs using the support form above. Select "Technical Issue" as the category and provide as much detail as possible about the problem you're experiencing.</p>
+            </div>
+          </div>
+        </div>
+      </div>
   </div>
 );
+};
 
 export default SettingsPage;

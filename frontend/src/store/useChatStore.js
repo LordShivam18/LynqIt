@@ -679,6 +679,17 @@ export const useChatStore = create((set, get) => ({
       console.log("🔍 Current user ID:", currentUserId);
       console.log("🔍 Selected user ID:", currentSelectedUser?._id);
 
+      // Play notification sound for new messages if the sender is not the current user
+      if (messageSenderId !== currentUserId) {
+        try {
+          const notificationSound = new Audio('/sounds/message.mp3');
+          notificationSound.volume = 0.5;
+          notificationSound.play().catch(e => console.log("Audio play error:", e));
+        } catch (error) {
+          console.error("Error playing notification sound:", error);
+        }
+      }
+
       // If sender is the selected user, add to current messages
       if (currentSelectedUser && messageSenderId === currentSelectedUser._id) {
         console.log("✅ Adding message to current conversation (sender is selected user)");
@@ -694,14 +705,39 @@ export const useChatStore = create((set, get) => ({
         // Mark message as seen after a short delay (simulating reading time)
         setTimeout(() => {
           get().markMessagesAsSeen([newMessage._id]);
-        }, 2000);
+        }, 1000);
+
+        // Also mark the chat as read to clear unread badges
+        get().markChatAsRead('direct', messageSenderId);
       }
-      // If we're the receiver but not on this chat, don't manually increment
-      // The server will handle unread count updates via socket events
+      // If we're the receiver but not on this chat, handle unread count
       else if (newMessage.receiverId === currentUserId) {
         console.log("📬 Received message from different user, updating sidebar");
-        // If we receive a message from someone other than the selected user,
-        // update the users list to show the latest message in the sidebar
+        
+        // Show a toast notification for the new message
+        if (messageSenderId !== currentUserId) {
+          try {
+            // Find the sender's information from users list
+            const sender = get().users.find(u => u._id === messageSenderId) || 
+                          get().allUsers.find(u => u._id === messageSenderId);
+            if (sender) {
+              const senderName = sender.fullName || sender.username;
+              const messagePreview = newMessage.text ? 
+                (newMessage.text.length > 30 ? `${newMessage.text.slice(0, 30)}...` : newMessage.text) : 
+                (newMessage.image ? 'Sent an image' : 'New message');
+                
+              toast.success(`${senderName}: ${messagePreview}`, {
+                duration: 4000,
+                position: 'top-right',
+                icon: '💬'
+              });
+            }
+          } catch (error) {
+            console.error("Error showing notification toast:", error);
+          }
+        }
+        
+        // Force update the users list to show the latest message in the sidebar
         get().getUsers();
 
         // The unread counts will be updated via socket event "unreadCountUpdate"

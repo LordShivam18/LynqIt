@@ -37,17 +37,18 @@ export const getUsersForSidebar = async (req, res) => {
     messages.forEach(message => {
       // Check if senderId exists and is not the logged-in user
       if (message.senderId && message.senderId.toString() !== loggedInUserId.toString()) {
-        userIds.add(message.senderId);
+        userIds.add(message.senderId.toString());
       }
       // Check if receiverId exists and is not the logged-in user
       if (message.receiverId && message.receiverId.toString() !== loggedInUserId.toString()) {
-        userIds.add(message.receiverId);
+        userIds.add(message.receiverId.toString());
       }
     });
 
     // Filter out blocked users from the user IDs
+    const blockedUserIds = currentUser.blockedUsers.map(id => id.toString());
     const filteredUserIds = Array.from(userIds).filter(userId =>
-      !currentUser.blockedUsers.includes(userId)
+      !blockedUserIds.includes(userId)
     );
 
     // Get user details for all users we've communicated with (excluding blocked users)
@@ -169,7 +170,21 @@ export const sendMessage = async (req, res) => {
     }
 
     // Check if sender has blocked receiver or receiver has blocked sender
-    if (sender.blockedUsers.includes(receiverId) || receiver.blockedUsers.includes(senderId)) {
+    const senderBlockedReceiver = sender.blockedUsers.some(
+      id => id.toString() === receiverId.toString()
+    );
+    
+    const receiverBlockedSender = receiver.blockedUsers.some(
+      id => id.toString() === senderId.toString()
+    );
+
+    if (senderBlockedReceiver || receiverBlockedSender) {
+      console.log("Message blocked - Block status:", { 
+        senderBlockedReceiver, 
+        receiverBlockedSender,
+        senderBlockedList: sender.blockedUsers,
+        receiverBlockedList: receiver.blockedUsers
+      });
       return res.status(403).json({ error: "Cannot send message to this user" });
     }
 

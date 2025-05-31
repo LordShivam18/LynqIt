@@ -8,6 +8,7 @@ import axios from "axios";
 
 import AuthImagePattern from "../components/AuthImagePattern";
 import toast from "react-hot-toast";
+import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -248,20 +249,10 @@ const SignUpPage = () => {
 
               {/* Password Requirements Checklist */}
               {passwordStrength.showCriteria && (
-                <div className="mt-2 bg-base-200 p-3 rounded-lg border">
-                  <p className="text-sm font-medium mb-2">Password Requirements:</p>
-                  <ul className="space-y-1">
-                    {passwordStrength.criteria.map(criteria => (
-                      <li key={criteria.id} className="flex items-center gap-2 text-xs">
-                        {criteria.valid ?
-                          <Check size={14} className="text-green-500" /> :
-                          <X size={14} className="text-red-500" />
-                        }
-                        {criteria.label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <PasswordStrengthMeter 
+                  password={formData.password}
+                  criteria={passwordStrength.criteria}
+                />
               )}
             </div>
 

@@ -11,6 +11,7 @@ import OTPVerificationPage from "./pages/OTPVerificationPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import JoinGroupPage from "./pages/JoinGroupPage";
+import ReportThanksPage from "./pages/ReportThanksPage";
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
@@ -107,6 +108,7 @@ const App = () => {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/security" element={authUser ? <SecuritySettings /> : <Navigate to="/login" />} />
           <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
+          <Route path="/report-thanks" element={authUser ? <ReportThanksPage /> : <Navigate to="/login" />} />
           <Route path="/join-group/:groupId" element={
             <ErrorBoundary>
               <JoinGroupPage />

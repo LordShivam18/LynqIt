@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useThemeStore } from "../store/useThemeStore";
 import bcrypt from "bcryptjs-react";
 import { toast } from "react-hot-toast";
+import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
@@ -769,23 +770,10 @@ const ProfilePage = () => {
                       </div>
                       
                       {/* Password Validation */}
-                      <div className="bg-base-200 rounded-lg p-3 space-y-2">
-                        <h4 className="text-xs font-medium">Password requirements:</h4>
-                        <ul className="space-y-1">
-                          {validatePasswordCriteria(profileData.newPassword || "").map(criteria => (
-                            <li 
-                              key={criteria.id} 
-                              className="flex items-center gap-2 text-xs"
-                            >
-                              {criteria.valid ? 
-                                <Check className="w-3.5 h-3.5 text-success" /> : 
-                                <div className="w-3.5 h-3.5 border border-base-content/30 rounded-full"></div>
-                              }
-                              <span className={criteria.valid ? 'text-success' : ''}>{criteria.label}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                      <PasswordStrengthMeter 
+                        password={profileData.newPassword || ""}
+                        criteria={validatePasswordCriteria(profileData.newPassword || "")}
+                      />
                       
                       {/* Action Buttons */}
                       <div className="flex justify-end">

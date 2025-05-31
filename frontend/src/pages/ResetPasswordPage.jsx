@@ -5,6 +5,7 @@ import OTPInput from '../components/OTPInput';
 import AuthImagePattern from '../components/AuthImagePattern';
 import axios from 'axios';
 import { Mail, Loader2, ArrowLeft, Eye, EyeOff, Lock, Check, X, Info } from 'lucide-react';
+import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
@@ -21,6 +22,9 @@ const ResetPasswordPage = () => {
 
   // Get email from location state
   const email = location.state?.email;
+  const verifiedWith2FA = location.state?.verifiedWith2FA;
+  const [otpVerified, setOtpVerified] = useState(verifiedWith2FA || false);
+  const [otp, setOtp] = useState('');
 
   // Password validation criteria
   const [passwordStrength, setPasswordStrength] = useState({
@@ -73,6 +77,11 @@ const ResetPasswordPage = () => {
       return;
     }
 
+    // If already verified with 2FA, skip OTP verification
+    if (verifiedWith2FA) {
+      setOtpVerified(true);
+    }
+
     // Check if the email exists in the database
     checkEmailExists(email);
 
@@ -89,7 +98,7 @@ const ResetPasswordPage = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [email, navigate]);
+  }, [email, navigate, verifiedWith2FA]);
 
   // Update password validation whenever password changes
   useEffect(() => {
@@ -104,8 +113,30 @@ const ResetPasswordPage = () => {
     });
   }, [password]);
 
-  const handleOTPComplete = async (otp) => {
-    if (otp.length !== 6) return;
+  const handleOTPComplete = async (code) => {
+    setOtp(code);
+    
+    if (code.length !== 6) return;
+    
+    try {
+      setIsVerifying(true);
+      
+      // Skip OTP verification if already verified with 2FA
+      if (!verifiedWith2FA) {
+        // Check OTP validity using the verifyOTP function or just set it
+        // We'll validate the OTP when we submit the password reset request
+        setOtpVerified(true);
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      toast.error(error.response?.data?.message || 'Invalid verification code');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
 
     // Check if password is valid
     const isPasswordValid = passwordStrength.criteria.every(c => c.valid);
@@ -117,11 +148,11 @@ const ResetPasswordPage = () => {
     try {
       setIsVerifying(true);
 
-      const response = await axios.post('/api/auth/reset-password', {
-        email,
-        otp,
-        newPassword: password
-      });
+      const payload = verifiedWith2FA 
+        ? { email, newPassword: password, skipOtp: true }
+        : { email, otp, newPassword: password };
+      
+      const response = await axios.post('/api/auth/reset-password', payload);
 
       toast.success('Password reset successfully!');
       setIsSuccess(true);
@@ -132,28 +163,7 @@ const ResetPasswordPage = () => {
       }, 2000);
     } catch (error) {
       console.error('Password reset error:', error);
-
-      // Handle specific error types
-      const errorMessage = error.response?.data?.message || 'Failed to reset password';
-
-      if (error.response?.status === 404) {
-        // User not found - explicitly tell the user
-        toast.error(`No account found with email: ${email}`);
-
-        // Redirect back to forgot password page after a short delay
-        setTimeout(() => {
-          navigate('/forgot-password');
-        }, 2000);
-      } else if (error.response?.status === 400 && errorMessage.includes('Invalid or expired')) {
-        // Invalid OTP
-        toast.error('Invalid verification code. Please try again or request a new code.');
-      } else if (error.response?.status === 400) {
-        // Other validation errors
-        toast.error(errorMessage);
-      } else {
-        // Generic server error
-        toast.error('Server error. Please try again later.');
-      }
+      toast.error(error.response?.data?.message || 'Failed to reset password');
     } finally {
       setIsVerifying(false);
     }
@@ -280,21 +290,21 @@ const ResetPasswordPage = () => {
             Back to Forgot Password
           </Link>
 
-          {/* Header with App Logo */}
-          <div className="flex items-center mb-5 justify-center">
-            <Lock className="size-6 text-primary mr-2" />
-            <div>
-              <h1 className="text-xl font-semibold">Reset Your Password</h1>
-              <p className="text-xs text-base-content/60">Create a new secure password</p>
-            </div>
-          </div>
-
-          <div className="text-center mb-6">
-            <p className="text-base-content/70">
-              We've sent a verification code to <span className="font-medium">{email}</span>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold">
+              {otpVerified ? 'Set New Password' : 'Verify Your Identity'}
+            </h1>
+            <p className="text-base-content/60 mt-2">
+              {otpVerified
+                ? 'Create a strong password to secure your account'
+                : `We sent a verification code to ${email}`}
             </p>
           </div>
 
+          {otpVerified ? (
+            // Password reset form
+            <form onSubmit={handleResetPassword} className="space-y-4">
           <div className="form-control mb-6">
             <label className="label pb-1">
               <span className="label-text font-medium">New Password<span className="text-error">*</span></span>
@@ -326,32 +336,16 @@ const ResetPasswordPage = () => {
 
             {/* Password strength criteria */}
             {passwordStrength.showCriteria && (
-              <div className="mt-3 space-y-2">
-                {passwordStrength.criteria.map((criteria) => (
-                  <div key={criteria.id} className="flex items-center">
-                    {criteria.valid ? (
-                      <Check className="size-4 text-success mr-2" />
-                    ) : (
-                      <X className="size-4 text-error mr-2" />
+                  <PasswordStrengthMeter 
+                    password={password}
+                    criteria={passwordStrength.criteria}
+                  />
                     )}
-                    <span className={`text-sm ${criteria.valid ? 'text-success' : 'text-error'}`}>
-                      {criteria.text}
-                    </span>
-                  </div>
-                ))}
               </div>
-            )}
-          </div>
-
-          <p className="text-sm text-base-content/70 mb-4">
-            Enter the 6-digit verification code sent to your email
-          </p>
-
-          <OTPInput length={6} onComplete={handleOTPComplete} />
 
           <div className="mt-6">
             <button
-              onClick={() => {}}
+                  type="submit"
               disabled={isVerifying || !passwordStrength.criteria.every(c => c.valid)}
               className="btn btn-primary w-full"
             >
@@ -365,6 +359,11 @@ const ResetPasswordPage = () => {
               )}
             </button>
           </div>
+            </form>
+          ) : (
+            // OTP verification form
+            <div className="space-y-6">
+              <OTPInput length={6} onComplete={handleOTPComplete} />
 
           <div className="mt-4 text-center">
             <p className="text-base-content/60 text-sm">
@@ -384,13 +383,17 @@ const ResetPasswordPage = () => {
               )}
             </p>
           </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Right Side - Image/Pattern */}
       <AuthImagePattern
-        title="Reset your password"
-        subtitle="We'll help you get back into your account safely and securely."
+        title={otpVerified ? 'Create New Password' : 'Verify Your Identity'}
+        subtitle={otpVerified
+          ? 'Choose a strong password to keep your account secure'
+          : 'Enter the verification code sent to your email'}
       />
     </div>
   );
