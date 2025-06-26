@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import AuthImagePattern from "../components/AuthImagePattern";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,18 +9,92 @@ import toast from "react-hot-toast";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
   const navigate = useNavigate();
   const { login, isLoggingIn, loginWithGoogle, googleAuthInfo } = useAuthStore();
 
+  // FACE LOGIN STATE
+  const videoRef = useRef(null);
+  const [faceStatus, setFaceStatus] = useState('Loading models...');
+  const [faceLoading, setFaceLoading] = useState(false);
+
+  // Load Face API models + camera
+  useEffect(() => {
+    const loadModelsAndStartCamera = async () => {
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+        ]);
+        setFaceStatus('Models loaded. Starting camera...');
+        startCamera();
+      } catch (err) {
+        console.error('Error loading models:', err);
+        setFaceStatus('Failed to load face-api models.');
+      }
+    };
+
+    loadModelsAndStartCamera();
+  }, []);
+
+  const startCamera = () => {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        videoRef.current.srcObject = stream;
+        setFaceStatus('Camera ready. Look into the camera to login.');
+      })
+      .catch(err => {
+        console.error('Camera error:', err);
+        setFaceStatus('Camera access denied.');
+      });
+  };
+
+  const handleFaceLogin = async () => {
+    setFaceLoading(true);
+    setFaceStatus('Scanning face...');
+
+    const detection = await faceapi
+      .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detection) {
+      setFaceStatus('No face detected. Try again.');
+      setFaceLoading(false);
+      return;
+    }
+
+    const embedding = Array.from(detection.descriptor);
+
+    try {
+      const res = await fetch('/api/auth/face-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ embedding }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        setFaceStatus('Login successful!');
+        navigate('/'); // or /chat
+      } else {
+        setFaceStatus('Face not recognized.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setFaceStatus('Server error during login.');
+    }
+
+    setFaceLoading(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check if the email is from Gmail or Outlook
     const validDomains = ['gmail.com', 'outlook.com', 'hotmail.com'];
     const emailDomain = formData.email.split('@')[1]?.toLowerCase();
 
@@ -31,23 +105,12 @@ const LoginPage = () => {
 
     try {
       const result = await login(formData);
-
-      // Login successful - navigate to home
-      if (result && result.success) {
-        navigate('/');
-      }
-    } catch (error) {
-      // Error is handled in the auth store
-    }
+      if (result?.success) navigate('/');
+    } catch (error) {}
   };
 
   const handleGoogleLogin = async (result) => {
-    // If successful login, navigate to homepage
-    if (result && result.success) {
-      navigate('/');
-    }
-    // If username is needed (new user), the modal will show automatically
-    // No need to navigate - user will stay on current page until they create a username
+    if (result?.success) navigate('/');
   };
 
   const handleGoogleError = (error) => {
@@ -60,7 +123,6 @@ const LoginPage = () => {
       {/* Left Side - Form */}
       <div className="flex flex-col justify-center items-center p-6 sm:p-12">
         <div className="w-full max-w-md">
-          {/* Header with App Logo */}
           <div className="flex items-center mb-5 justify-center">
             <MessageSquare className="size-6 text-primary mr-2" />
             <div>
@@ -69,16 +131,13 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 mt-5">
             <div className="form-control">
               <label className="label pb-1">
                 <span className="label-text font-medium">Email<span className="text-error">*</span></span>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="size-5 text-base-content/40" />
-                </div>
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-base-content/40" />
                 <input
                   type="email"
                   className={`input input-bordered w-full pl-10 ${!formData.email && 'input-error'}`}
@@ -98,9 +157,7 @@ const LoginPage = () => {
                 </Link>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="size-5 text-base-content/40" />
-                </div>
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-base-content/40" />
                 <input
                   type={showPassword ? "text" : "password"}
                   className={`input input-bordered w-full pl-10 ${!formData.password && 'input-error'}`}
@@ -111,27 +168,16 @@ const LoginPage = () => {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOff className="size-5 text-base-content/40" />
-                  ) : (
-                    <Eye className="size-5 text-base-content/40" />
-                  )}
+                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                 </button>
               </div>
             </div>
 
             <button type="submit" className="btn btn-primary w-full mt-2" disabled={isLoggingIn}>
-              {isLoggingIn ? (
-                <>
-                  <Loader2 className="size-5 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                "Sign in"
-              )}
+              {isLoggingIn ? <><Loader2 className="size-5 animate-spin" /> Loading...</> : "Sign in"}
             </button>
           </form>
 
@@ -141,7 +187,6 @@ const LoginPage = () => {
             <hr className="flex-1 border-base-300" />
           </div>
 
-          {/* Google Login Button */}
           <div className="flex justify-center">
             <GoogleButton
               text="Continue with Google"
@@ -159,6 +204,27 @@ const LoginPage = () => {
               </Link>
             </p>
           </div>
+
+          {/* Face Login Section */}
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold mb-2 text-center">Face Login</h2>
+            <p className="text-xs text-gray-500 text-center mb-2">{faceStatus}</p>
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              width="320"
+              height="240"
+              className="mx-auto border rounded mb-3"
+            />
+            <button
+              onClick={handleFaceLogin}
+              disabled={faceLoading}
+              className="btn btn-success w-full"
+            >
+              {faceLoading ? 'Authenticating...' : 'Login with Face'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -168,11 +234,12 @@ const LoginPage = () => {
         subtitle={"Sign in to continue your conversations and catch up with your messages."}
       />
 
-      {/* Username Prompt for Google Auth */}
       {googleAuthInfo && (
         <GoogleUsernamePrompt onComplete={() => navigate('/')} />
       )}
     </div>
   );
 };
+
 export default LoginPage;
+// This code is a React component for a login page that includes email/password login, Google login, and face recognition login.

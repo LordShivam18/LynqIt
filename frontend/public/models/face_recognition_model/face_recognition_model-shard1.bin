@@ -1,0 +1,1 @@
+The file you mentioned, `face_recognition_model-shard1.bin`, is a binary model file, not a code file. You do not need to edit or write code in this file. It is used by your application (likely for face recognition) and should remain unchanged. If you need to use or update the model, do so through your application's code or by replacing the file with a new version if needed.

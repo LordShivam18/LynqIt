@@ -5,6 +5,39 @@ import OTPInput from '../components/OTPInput';
 import AuthImagePattern from '../components/AuthImagePattern';
 import axios from 'axios';
 import { Mail } from 'lucide-react';
+import * as faceapi from 'face-api.js';
+
+// Utility to capture face embedding
+const captureFaceEmbedding = async () => {
+  try {
+    await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+    await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+    await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+
+    const detection = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    stream.getTracks().forEach(track => track.stop()); // stop webcam
+
+    if (!detection) {
+      toast.error("No face detected. Try again.");
+      return null;
+    }
+
+    return detection.descriptor;
+  } catch (err) {
+    console.error("Face capture error:", err);
+    toast.error("Failed to capture face embedding.");
+    return null;
+  }
+};
 
 const OTPVerificationPage = () => {
   const navigate = useNavigate();
@@ -18,13 +51,11 @@ const OTPVerificationPage = () => {
   const userData = location.state?.userData;
 
   useEffect(() => {
-    // If no userData is provided, redirect to signup
     if (!userData) {
       navigate('/signup');
       return;
     }
 
-    // Start countdown for resend button
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -53,40 +84,49 @@ const OTPVerificationPage = () => {
         password: userData.password
       });
 
-      // Save user data to local storage
       localStorage.setItem('userInfo', JSON.stringify(response.data));
-
       toast.success('Email verified successfully!');
+
+      const embedding = await captureFaceEmbedding();
+
+      if (embedding) {
+        try {
+          await axios.post('/api/auth/save-embedding', {
+            embedding: Array.from(embedding)
+          }, {
+            headers: {
+              Authorization: `Bearer ${response.data.token}`,
+            }
+          });
+          toast.success('Face registered successfully!');
+        } catch (err) {
+          console.error('Error saving face embedding:', err);
+          toast.error('Failed to save face data. You can try again in settings.');
+        }
+      }
+
       navigate('/');
     } catch (error) {
       console.error('OTP verification error:', error);
-
-      // Handle specific error types
       const errorType = error.response?.data?.error;
       const errorMessage = error.response?.data?.message || 'Failed to verify OTP';
 
       if (errorType === 'email_service_error') {
-        // Email service related errors
         toast.error(errorMessage, { duration: 5000 });
         toast.error('Account created but welcome email could not be sent. You can still proceed.', {
           duration: 5000,
           id: 'welcome-email-error'
         });
-
-        // Try to navigate to home if the account was created despite email error
         try {
           navigate('/');
         } catch (navError) {
           console.error('Navigation error:', navError);
         }
       } else if (error.response?.status === 400 && errorMessage.includes('Invalid or expired OTP')) {
-        // Invalid OTP
         toast.error('Invalid verification code. Please try again or request a new code.');
       } else if (error.response?.status === 400) {
-        // Other validation errors
         toast.error(errorMessage);
       } else {
-        // Generic server error
         toast.error('Server error. Please try again later.');
       }
     } finally {
@@ -103,12 +143,9 @@ const OTPVerificationPage = () => {
       });
 
       toast.success('Verification code resent successfully');
-
-      // Reset countdown
       setCountdown(60);
       setCanResend(false);
 
-      // Start countdown again
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -121,18 +158,14 @@ const OTPVerificationPage = () => {
       }, 1000);
     } catch (error) {
       console.error('Resend OTP error:', error);
-
-      // Handle specific error types
       const errorType = error.response?.data?.error;
       const errorMessage = error.response?.data?.message || 'Failed to resend verification code';
 
       if (errorType === 'email_service_error' ||
           errorType === 'email_auth_error' ||
           errorType === 'email_connection_error') {
-        // Email service related errors
         toast.error(errorMessage, { duration: 5000 });
 
-        // Show a more detailed error for email service issues
         if (errorType === 'email_service_error') {
           toast.error('Please try again later or use a different email address', {
             duration: 5000,
@@ -140,10 +173,8 @@ const OTPVerificationPage = () => {
           });
         }
       } else if (error.response?.status === 400) {
-        // Validation errors (bad request)
         toast.error(errorMessage);
       } else {
-        // Generic server error
         toast.error('Server error. Please try again later.');
       }
     } finally {
@@ -153,10 +184,8 @@ const OTPVerificationPage = () => {
 
   return (
     <div className="h-screen grid lg:grid-cols-2">
-      {/* Left Side - Form */}
       <div className="flex flex-col justify-center items-center p-6 sm:p-12">
         <div className="w-full max-w-md">
-          {/* Header with App Logo */}
           <div className="flex items-center mb-5 justify-center">
             <Mail className="size-6 text-primary mr-2" />
             <div>
@@ -174,11 +203,7 @@ const OTPVerificationPage = () => {
           <OTPInput length={6} onComplete={handleOTPComplete} />
 
           <div className="mt-6">
-            <button
-              onClick={() => {}}
-              disabled={isVerifying}
-              className="btn btn-primary w-full"
-            >
+            <button onClick={() => {}} disabled={isVerifying} className="btn btn-primary w-full">
               {isVerifying ? (
                 <>
                   <span className="loading loading-spinner loading-sm mr-2"></span>
@@ -194,11 +219,7 @@ const OTPVerificationPage = () => {
             <p className="text-base-content/60 text-sm">
               Didn't receive the code?{' '}
               {canResend ? (
-                <button
-                  onClick={handleResendOTP}
-                  disabled={isResending}
-                  className="link link-primary"
-                >
+                <button onClick={handleResendOTP} disabled={isResending} className="link link-primary">
                   {isResending ? 'Resending...' : 'Resend Code'}
                 </button>
               ) : (
@@ -210,17 +231,13 @@ const OTPVerificationPage = () => {
           </div>
 
           <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/signup')}
-              className="link link-hover text-base-content/60 text-sm"
-            >
+            <button onClick={() => navigate('/signup')} className="link link-hover text-base-content/60 text-sm">
               Back to Sign Up
             </button>
           </div>
         </div>
       </div>
 
-      {/* Right Side - Image/Pattern */}
       <AuthImagePattern
         title="Verify your account"
         subtitle="One step away from joining LynqIt! Enter the verification code to complete your registration."
